@@ -1,0 +1,140 @@
+import './App.css'
+import { MultiLineTimeline, type MultiLineTimelineTrack } from './components/MultiLineTimeline'
+
+const branchTracks: MultiLineTimelineTrack[] = [
+  {
+    id: 'main',
+    name: 'main',
+    color: '#1fb6ff',
+    items: [
+      {
+        id: 'main-foundation',
+        title: 'Foundation merged',
+        annotation: '',
+        at: '2025-01-08',
+        endAt: '2025-01-29',
+      },
+      {
+        id: 'main-beta',
+        title: 'Beta drop',
+        annotation: '',
+        at: '2025-01-22',
+        endAt: '2025-01-24',
+      },
+      {
+        id: 'main-tag',
+        title: 'v1.0 tag',
+        annotation: '',
+        at: '2025-02-05',
+        endAt: '2025-02-07',
+      },
+      {
+        id: 'main-hotfix',
+        title: 'Hotfix 1.0.1',
+        annotation: '',
+        at: '2025-02-11',
+        endAt: '2025-02-14',
+      },
+    ],
+  },
+  {
+    id: 'incident',
+    name: 'incident',
+    color: '#ff0000',
+    startWeek: 2,
+    endWeek: 4,
+    items: [
+      {
+        id: 'incident-detected',
+        title: 'Incident detected',
+        annotation: '',
+        at: '2025-01-15',
+        endAt: '2025-01-16',
+      },
+      {
+        id: 'incident-resolved',
+        title: 'Incident resolved',
+        annotation: '',
+        at: '2025-01-16',
+        endAt: '2025-01-17',
+      },
+    ],
+  },
+  {
+    id: 'feature-auth',
+    name: 'feature/auth-redesign',
+    color: '#13ce66',
+    items: [
+      {
+        id: 'auth-start',
+        title: 'Branch cut',
+        annotation: '',
+        at: '2025-01-12',
+        endAt: '2025-01-18',
+      },
+      {
+        id: 'auth-review',
+        title: 'Design review',
+        annotation: '',
+        at: '2025-01-26',
+        endAt: '2025-01-27',
+      },
+      {
+        id: 'auth-merge',
+        title: 'Rebased & merged',
+        annotation: '',
+        at: '2025-02-03',
+        endAt: '2025-02-04',
+      },
+    ],
+  },
+  {
+    id: 'feature-api-gateway',
+    name: 'feature/api-gateway',
+    color: '#ff7849',
+    items: [
+      {
+        id: 'api-scaffold',
+        title: 'Edge routes ready',
+        annotation: '',
+        at: '2025-01-10',
+        endAt: '2025-01-12',
+      },
+      {
+        id: 'api-perf',
+        title: 'Perf tuning',
+        annotation: '',
+        at: '2025-01-30',
+        endAt: '2025-02-02',
+      },
+      {
+        id: 'api-merge',
+        title: 'Merged behind flag',
+        annotation: '',
+        at: '2025-02-07',
+        endAt: '2025-02-09',
+      },
+    ],
+  },
+]
+
+function App() {
+  return (
+    <div
+      className="min-h-screen px-6 py-10"
+      style={{
+        background:
+          'radial-gradient(circle at 10% 10%, rgba(31,182,255,0.12), transparent 35%), radial-gradient(circle at 80% 0%, rgba(255,120,73,0.08), transparent 30%), #f7f8fb',
+      }}
+    >
+      <div className="mx-auto flex flex-col gap-10">
+        <section className="p-8">
+          <h2 className="text-xl font-bold text-gray-dark">Onboarding</h2>
+          <MultiLineTimeline tracks={branchTracks} weeks={26} sprintLength={2} weekHeight={90} />
+        </section>
+      </div>
+    </div>
+  )
+}
+
+export default App
