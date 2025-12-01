@@ -76,8 +76,8 @@ const branchTracks: MultiLineTimelineTrack[] = [
         id: 'auth-review',
         title: 'Design review',
         annotation: '',
-        at: '2025-01-26',
-        endAt: '2025-01-27',
+        at: '2025-01-16',
+        endAt: '2025-01-17',
       },
       {
         id: 'auth-merge',

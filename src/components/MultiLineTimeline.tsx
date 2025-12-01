@@ -28,9 +28,9 @@ type MultiLineTimelineProps = {
 const DAY_MS = 1000 * 60 * 60 * 24
 const WEEK_MS = DAY_MS * 7
 
-function clampPercent(value: number) {
-  if (Number.isNaN(value)) return 0
-  return Math.min(100, Math.max(0, value))
+function clampNumber(value: number, min: number, max: number) {
+  if (Number.isNaN(value)) return min
+  return Math.min(max, Math.max(min, value))
 }
 
 function normalizeDateToUTC(date: Date) {
@@ -57,26 +57,33 @@ function parseAtDate(at?: string): Date | null {
   return Number.isNaN(parsed.getTime()) ? null : normalizeDateToUTC(parsed)
 }
 
-function computeTopPercent({
+function computeTopPx({
   atDate,
   startWeekDate,
   totalWeeks,
   index,
   totalItems,
+  weekHeight,
+  trackHeight,
+  offsetTop,
 }: {
   atDate?: Date | null
   startWeekDate?: Date | null
   totalWeeks: number
   index: number
   totalItems: number
+  weekHeight: number
+  trackHeight: number
+  offsetTop: number
 }) {
-  if (atDate && startWeekDate && totalWeeks > 1) {
+  if (atDate && startWeekDate && totalWeeks > 0) {
     const diffWeeks = (atDate.getTime() - startWeekDate.getTime()) / WEEK_MS
-    const percent = (diffWeeks / (totalWeeks - 1)) * 100
-    return clampPercent(percent)
+    const clampedWeeks = clampNumber(diffWeeks, 0, Math.max(0, totalWeeks - 1))
+    const position = clampedWeeks * weekHeight - offsetTop
+    return clampNumber(position, 0, trackHeight)
   }
-  if (totalItems <= 1) return 50
-  return (index / (totalItems - 1)) * 100
+  if (totalItems <= 1) return trackHeight / 2
+  return (index / (totalItems - 1)) * trackHeight
 }
 
 function WeekRail({
@@ -180,29 +187,49 @@ function SprintGuides({
 
 type DurationSpan = { id: string; topPx: number; heightPx: number }
 
-function buildDurationSpans(track: MultiLineTimelineTrack, height: number, startWeekDate: Date | null, totalWeeks: number) {
+function buildDurationSpans({
+  track,
+  trackHeight,
+  startWeekDate,
+  totalWeeks,
+  weekHeight,
+  offsetTop,
+}: {
+  track: MultiLineTimelineTrack
+  trackHeight: number
+  startWeekDate: Date | null
+  totalWeeks: number
+  weekHeight: number
+  offsetTop: number
+}) {
   return track.items
     .map((item, index) => {
       const startDate = parseAtDate(item.at)
       const endDate = parseAtDate(item.endAt)
       if (!startDate || !endDate) return null
-      const startPercent = computeTopPercent({
+      const startPx = computeTopPx({
         atDate: startDate,
         startWeekDate,
         totalWeeks,
         index,
         totalItems: track.items.length,
+        weekHeight,
+        trackHeight,
+        offsetTop,
       })
-      const endPercent = computeTopPercent({
+      const endPx = computeTopPx({
         atDate: endDate,
         startWeekDate,
         totalWeeks,
         index,
         totalItems: track.items.length,
+        weekHeight,
+        trackHeight,
+        offsetTop,
       })
-      const spanTopPercent = Math.min(startPercent, endPercent)
-      const spanHeightPx = Math.max(6, (Math.abs(endPercent - startPercent) / 100) * height)
-      const spanTopPx = (spanTopPercent / 100) * height
+      const spanTopPx = clampNumber(Math.min(startPx, endPx), 0, trackHeight)
+      const spanBottomPx = clampNumber(Math.max(startPx, endPx), 0, trackHeight)
+      const spanHeightPx = Math.max(6, spanBottomPx - spanTopPx)
       return { id: item.id, topPx: spanTopPx, heightPx: spanHeightPx }
     })
     .filter(Boolean) as DurationSpan[]
@@ -223,7 +250,7 @@ function TrackDurationSpans({ spans, color }: { spans: DurationSpan[]; color: st
       {spans.map((span) => (
         <div
           key={`${span.id}-span`}
-          className="absolute w-[12px] before:absolute before:-left-[12px] before:top-0 before:h-full before:w-[12px] before:skew-y-[-12deg]"
+          className="absolute w-[12px]"
           style={{
             left: '0.6rem',
             transform: 'translateX(-50%)',
@@ -231,7 +258,7 @@ function TrackDurationSpans({ spans, color }: { spans: DurationSpan[]; color: st
             height: span.heightPx,
             backgroundColor: `${color}`,
             opacity: 0.25,
-            clipPath: 'polygon(0 0, 100% 10px, 100% calc(100% - 10px), 0 100%)',
+            clipPath: 'polygon(0 0, 100% 6px, 100% calc(100% - 6px), 0 100%)',
           }}
           aria-hidden
         />
@@ -248,11 +275,11 @@ function TrackItemCard({ item }: { item: MultiLineTimelineItem; }) {
     >
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-xs font-semibold text-gray">
+          <p className="text-[0.625rem] text-gray">
             {item.at}
             {item.endAt ? ` → ${item.endAt}` : ''}
           </p>
-          <p className="text-sm font-bold text-gray-dark">{item.title}</p>
+          <p className="text-sm font-semibold text-gray-dark">{item.title}</p>
         </div>
       </div>
       <p className="text-sm text-gray-dark">{item.annotation}</p>
@@ -262,13 +289,13 @@ function TrackItemCard({ item }: { item: MultiLineTimelineItem; }) {
 
 function TrackItemRow({
   item,
-  top,
+  topPx,
 }: {
   item: MultiLineTimelineItem
-  top: number
+  topPx: number
 }) {
   return (
-    <div className="absolute left-4 right-0" style={{ top: `calc(${top}% - 14px)` }}>
+    <div className="absolute left-4 right-0" style={{ top: `${topPx - 14}px` }}>
       <div className="flex items-start gap-3">
         <div className="relative w-full">
           <TrackItemCard item={item} />
@@ -280,26 +307,35 @@ function TrackItemRow({
 
 function MultiLineTimelineTrack({
   track,
-  height,
+  trackHeight,
   startWeekDate,
   totalWeeks,
   offsetTop,
   guidePadding,
+  weekHeight,
 }: {
   track: MultiLineTimelineTrack
-  height: number
+  trackHeight: number
   startWeekDate: Date | null
   totalWeeks: number
   offsetTop: number
   guidePadding: number
+  weekHeight: number
 }) {
-  const durationSpans = buildDurationSpans(track, height, startWeekDate, totalWeeks)
+  const durationSpans = buildDurationSpans({
+    track,
+    trackHeight,
+    startWeekDate,
+    totalWeeks,
+    weekHeight,
+    offsetTop,
+  })
 
   return (
     <div className="min-w-[260px]" style={{ marginTop: offsetTop }}>
       <TrackHeader track={track} />
       <div className="relative rounded-2xl" style={{ background: 'linear-gradient(180deg, rgba(211,220,230,0.5) 0%, rgba(211,220,230,0.1) 100%)', padding: guidePadding }}>
-        <div className="relative" style={{ height }}>
+        <div className="relative" style={{ height: trackHeight }}>
           <TrackDurationSpans spans={durationSpans} color={track.color} />
           <div
             className="absolute left-0.5 top-0 h-full w-1 rounded-full"
@@ -308,14 +344,17 @@ function MultiLineTimelineTrack({
           />
           {track.items.map((item, index) => {
             const atDate = parseAtDate(item.at)
-            const top = computeTopPercent({
+            const topPx = computeTopPx({
               atDate,
               startWeekDate,
               totalWeeks,
               index,
               totalItems: track.items.length,
+              weekHeight,
+              trackHeight,
+              offsetTop,
             })
-            return <TrackItemRow key={item.id} item={item} top={top} />
+            return <TrackItemRow key={item.id} item={item} topPx={topPx} />
           })}
         </div>
       </div>
@@ -367,20 +406,17 @@ export function MultiLineTimeline({ tracks, weeks, sprintLength = 2, weekHeight 
             const trackWeeks = Math.max(1, clampedEndWeek - clampedStartWeek + 1)
             const trackHeight = trackWeeks * weekHeight
             const offsetTop = (clampedStartWeek - 1) * weekHeight
-            const trackStartWeekDate =
-              startWeekDate && clampedStartWeek > 1
-                ? new Date(startWeekDate.getTime() + (clampedStartWeek - 1) * WEEK_MS)
-                : startWeekDate
 
             return (
               <MultiLineTimelineTrack
                 key={track.id}
                 track={track}
-                height={trackHeight}
-                startWeekDate={trackStartWeekDate}
-                totalWeeks={trackWeeks}
+                trackHeight={trackHeight}
+                startWeekDate={startWeekDate}
+                totalWeeks={totalWeeks}
                 offsetTop={offsetTop}
-                guidePadding={14}
+                guidePadding={guidePadding}
+                weekHeight={weekHeight}
               />
             )
           })}
