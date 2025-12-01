@@ -121,15 +121,15 @@ const branchTracks: MultiLineTimelineTrack[] = [
 function App() {
   return (
     <div
-      className="min-h-screen px-6 py-10"
+      className="min-h-screen"
       style={{
         background:
           'radial-gradient(circle at 10% 10%, rgba(31,182,255,0.12), transparent 35%), radial-gradient(circle at 80% 0%, rgba(255,120,73,0.08), transparent 30%), #f7f8fb',
       }}
     >
       <div className="mx-auto flex flex-col gap-10">
-        <section className="p-8">
-          <h2 className="text-xl font-bold text-gray-dark">Onboarding</h2>
+        <section>
+          <h2 className="text-xl font-bold text-gray-dark p-4">Onboarding</h2>
           <MultiLineTimeline tracks={branchTracks} weeks={26} sprintLength={2} weekHeight={90} />
         </section>
       </div>

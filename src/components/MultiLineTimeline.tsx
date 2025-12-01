@@ -101,7 +101,7 @@ function WeekRail({
 }) {
   const markers = Array.from({ length: totalWeeks }, (_, i) => i + 1)
   return (
-    <div className="min-w-[200px]">
+    <div className="min-w-[200px] pl-4">
       <div className="mb-4 text-sm font-semibold text-gray-dark">Weeks</div>
       <div className="relative overflow-hidden" style={{ padding }}>
         <div className="relative" style={{ height }}>
