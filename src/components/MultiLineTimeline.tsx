@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react'
+import { type ReactNode, useState } from 'react'
 
 export type MultiLineTimelineItem = {
   id: string
@@ -27,6 +27,13 @@ type MultiLineTimelineProps = {
 
 const DAY_MS = 1000 * 60 * 60 * 24
 const WEEK_MS = DAY_MS * 7
+const CARD_HEIGHT_ESTIMATE = 70
+const CARD_ANCHOR_OFFSET = 14
+const STACK_X_OFFSET = 18
+const STACK_SLOP = 4
+const STACK_LEFT_BASE = 16
+const BASE_Z_INDEX = 100
+const SELECTED_Z_INDEX = 1000
 
 function clampNumber(value: number, min: number, max: number) {
   if (Number.isNaN(value)) return min
@@ -84,6 +91,15 @@ function computeTopPx({
   }
   if (totalItems <= 1) return trackHeight / 2
   return (index / (totalItems - 1)) * trackHeight
+}
+
+type PositionedItem = { item: MultiLineTimelineItem; topPx: number }
+type PositionedItemWithBounds = PositionedItem & { cardTop: number; cardBottom: number }
+type ItemCluster = {
+  id: string
+  items: PositionedItemWithBounds[]
+  containerTop: number
+  containerHeight: number
 }
 
 function WeekRail({
@@ -231,8 +247,53 @@ function buildDurationSpans({
       const spanBottomPx = clampNumber(Math.max(startPx, endPx), 0, trackHeight)
       const spanHeightPx = Math.max(6, spanBottomPx - spanTopPx)
       return { id: item.id, topPx: spanTopPx, heightPx: spanHeightPx }
-    })
+  })
     .filter(Boolean) as DurationSpan[]
+}
+
+function buildItemClusters(positionedItems: PositionedItem[]): ItemCluster[] {
+  if (!positionedItems.length) return []
+
+  const withBounds: PositionedItemWithBounds[] = positionedItems.map((p) => {
+    const cardTop = Math.max(0, p.topPx - CARD_ANCHOR_OFFSET)
+    const cardBottom = cardTop + CARD_HEIGHT_ESTIMATE
+    return { ...p, cardTop, cardBottom }
+  })
+
+  const sorted = [...withBounds].sort((a, b) => a.cardTop - b.cardTop)
+  const clusters: ItemCluster[] = []
+  let current: PositionedItemWithBounds[] = []
+  let currentEnd = -Infinity
+
+  sorted.forEach((item) => {
+    const overlaps = item.cardTop <= currentEnd + STACK_SLOP
+    if (!overlaps && current.length) {
+      const clusterTop = Math.min(...current.map((i) => i.cardTop))
+      const clusterBottom = Math.max(...current.map((i) => i.cardBottom))
+      clusters.push({
+        id: current.map((i) => i.item.id).join('-'),
+        items: current,
+        containerTop: clusterTop,
+        containerHeight: clusterBottom - clusterTop,
+      })
+      current = []
+    }
+    current.push(item)
+    currentEnd = Math.max(currentEnd, item.cardBottom)
+  })
+
+  if (current.length) {
+    const clusterTop = Math.min(...current.map((i) => i.cardTop))
+    const clusterBottom = Math.max(...current.map((i) => i.cardBottom))
+    clusters.push({
+      id: current.map((i) => i.item.id).join('-'),
+      items: current,
+      containerTop: clusterTop,
+      containerHeight: clusterBottom - clusterTop,
+    })
+  }
+
+  return clusters
 }
 
 function TrackHeader({ track }: { track: MultiLineTimelineTrack }) {
@@ -267,11 +328,27 @@ function TrackDurationSpans({ spans, color }: { spans: DurationSpan[]; color: st
   )
 }
 
-function TrackItemCard({ item }: { item: MultiLineTimelineItem; }) {
+function StackBadge({ count, color }: { count: number; color: string }) {
   return (
     <div
-      className="relative flex-1 rounded-xl border ml-1 px-3 py-2 shadow"
-      style={{ borderColor: '#d3dce6', background: 'rgba(255,255,255,0.95)' }}
+      className="flex h-6 min-w-[24px] items-center justify-center rounded-full px-2 text-[10px] font-semibold text-white shadow"
+      style={{ backgroundColor: color }}
+    >
+      {count}x
+    </div>
+  )
+}
+
+function TrackItemCard({ item, selected }: { item: MultiLineTimelineItem; selected: boolean }) {
+  return (
+    <div
+      className="relative flex-1 rounded-xl border ml-1 px-3 py-2 shadow transition duration-150"
+      style={{
+        borderColor: selected ? '#1fb6ff' : '#d3dce6',
+        background: 'rgba(255,255,255,0.97)',
+        boxShadow: selected ? '0 10px 30px rgba(0,0,0,0.12), 0 0 0 2px rgba(31,182,255,0.25)' : '0 4px 12px rgba(0,0,0,0.05)',
+        transform: selected ? 'translateY(-2px)' : 'translateY(0)',
+      }}
     >
       <div className="flex items-start justify-between gap-2">
         <div>
@@ -289,17 +366,73 @@ function TrackItemCard({ item }: { item: MultiLineTimelineItem; }) {
 
 function TrackItemRow({
   item,
-  topPx,
+  leftOffset,
+  topOffset,
+  zIndex,
+  selected,
+  onSelect,
 }: {
   item: MultiLineTimelineItem
-  topPx: number
+  leftOffset: number
+  topOffset: number
+  zIndex: number
+  selected: boolean
+  onSelect: (id: string) => void
 }) {
   return (
-    <div className="absolute left-4 right-0" style={{ top: `${topPx - 14}px` }}>
-      <div className="flex items-start gap-3">
-        <div className="relative w-full">
-          <TrackItemCard item={item} />
-        </div>
+    <button
+      type="button"
+      onClick={() => onSelect(item.id)}
+      className="absolute right-0 text-left focus:outline-none"
+      style={{
+        left: `${leftOffset}px`,
+        top: `${topOffset}px`,
+        zIndex,
+      }}
+    >
+      <TrackItemCard item={item} selected={selected} />
+    </button>
+  )
+}
+
+function TrackItemCluster({
+  cluster,
+  color,
+  selectedId,
+  onSelect,
+}: {
+  cluster: ItemCluster
+  color: string
+  selectedId: string | null
+  onSelect: (id: string) => void
+}) {
+  const hasStack = cluster.items.length > 1
+  return (
+    <div
+      className="absolute right-0"
+      style={{
+        top: `${cluster.containerTop}px`,
+        left: `${STACK_LEFT_BASE}px`,
+        height: `${cluster.containerHeight}px`,
+      }}
+    >
+      <div className="relative" style={{ height: cluster.containerHeight }}>
+        {hasStack ? (
+          <div className="absolute -left-6 -top-4">
+            <StackBadge count={cluster.items.length} color={color} />
+          </div>
+        ) : null}
+        {cluster.items.map((entry, idx) => (
+          <TrackItemRow
+            key={entry.item.id}
+            item={entry.item}
+            leftOffset={idx * STACK_X_OFFSET}
+            topOffset={entry.cardTop - cluster.containerTop}
+            zIndex={selectedId === entry.item.id ? SELECTED_Z_INDEX : BASE_Z_INDEX - idx}
+            selected={selectedId === entry.item.id}
+            onSelect={onSelect}
+          />
+        ))}
       </div>
     </div>
   )
@@ -313,6 +446,8 @@ function MultiLineTimelineTrack({
   offsetTop,
   guidePadding,
   weekHeight,
+  selectedId,
+  onSelect,
 }: {
   track: MultiLineTimelineTrack
   trackHeight: number
@@ -321,7 +456,24 @@ function MultiLineTimelineTrack({
   offsetTop: number
   guidePadding: number
   weekHeight: number
+  selectedId: string | null
+  onSelect: (id: string) => void
 }) {
+  const positionedItems: PositionedItem[] = track.items.map((item, index) => {
+    const atDate = parseAtDate(item.at)
+    const topPx = computeTopPx({
+      atDate,
+      startWeekDate,
+      totalWeeks,
+      index,
+      totalItems: track.items.length,
+      weekHeight,
+      trackHeight,
+      offsetTop,
+    })
+    return { item, topPx }
+  })
+  const clusters = buildItemClusters(positionedItems)
   const durationSpans = buildDurationSpans({
     track,
     trackHeight,
@@ -342,20 +494,15 @@ function MultiLineTimelineTrack({
             style={{ backgroundColor: track.color, boxShadow: `0 0 0 6px ${track.color}1a` }}
             aria-hidden
           />
-          {track.items.map((item, index) => {
-            const atDate = parseAtDate(item.at)
-            const topPx = computeTopPx({
-              atDate,
-              startWeekDate,
-              totalWeeks,
-              index,
-              totalItems: track.items.length,
-              weekHeight,
-              trackHeight,
-              offsetTop,
-            })
-            return <TrackItemRow key={item.id} item={item} topPx={topPx} />
-          })}
+          {clusters.map((cluster) => (
+            <TrackItemCluster
+              key={`cluster-${cluster.id}`}
+              cluster={cluster}
+              color={track.color}
+              selectedId={selectedId}
+              onSelect={onSelect}
+            />
+          ))}
         </div>
       </div>
     </div>
@@ -363,6 +510,7 @@ function MultiLineTimelineTrack({
 }
 
 export function MultiLineTimeline({ tracks, weeks, sprintLength = 2, weekHeight = 90 }: MultiLineTimelineProps) {
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const allDates = tracks.flatMap((track) => track.items.map((item) => parseAtDate(item.at))).filter(Boolean) as Date[]
   const rawStartDate = allDates.length ? new Date(Math.min(...allDates.map((d) => d.getTime()))) : null
   const rawEndDate = allDates.length ? new Date(Math.max(...allDates.map((d) => d.getTime()))) : null
@@ -417,6 +565,8 @@ export function MultiLineTimeline({ tracks, weeks, sprintLength = 2, weekHeight 
                 offsetTop={offsetTop}
                 guidePadding={guidePadding}
                 weekHeight={weekHeight}
+                selectedId={selectedId}
+                onSelect={(id) => setSelectedId(id)}
               />
             )
           })}
