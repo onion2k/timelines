@@ -23,7 +23,10 @@ type MultiLineTimelineProps = {
   weeks?: number
   sprintLength?: number
   weekHeight?: number
+  milestones?: Milestone[]
 }
+
+export type Milestone = { title: string; at: string }
 
 const DAY_MS = 1000 * 60 * 60 * 24
 const WEEK_MS = DAY_MS * 7
@@ -339,6 +342,58 @@ function StackBadge({ count, color }: { count: number; color: string }) {
   )
 }
 
+function MilestoneLines({
+  milestones,
+  startWeekDate,
+  totalWeeks,
+  weekHeight,
+  padding,
+  topOffset,
+}: {
+  milestones: Milestone[]
+  startWeekDate: Date | null
+  totalWeeks: number
+  weekHeight: number
+  padding: number
+  topOffset: number
+}) {
+  if (!milestones.length || !startWeekDate || totalWeeks < 1) return null
+
+  const lines = milestones
+    .map((m) => {
+      const atDate = parseAtDate(m.at)
+      if (!atDate) return null
+      const diffWeeks = (atDate.getTime() - startWeekDate.getTime()) / WEEK_MS
+      const top = clampNumber(diffWeeks * weekHeight, 0, totalWeeks * weekHeight)
+      return { ...m, top }
+    })
+    .filter(Boolean) as { title: string; at: string; top: number }[]
+
+  if (!lines.length) return null
+
+  return (
+    <div className="pointer-events-none absolute inset-0" aria-hidden style={{ top: topOffset, left: 0, right: 0 }}>
+      <div className="relative" style={{ height: totalWeeks * weekHeight, paddingTop: padding, paddingBottom: padding }}>
+        {lines.map((line) => (
+          <div
+            key={`milestone-${line.title}-${line.at}`}
+            className="absolute left-0 right-0 flex items-center justify-end gap-3"
+            style={{ top: line.top }}
+          >
+            <div
+              className="h-px flex-1"
+              style={{ background: 'linear-gradient(90deg, rgba(31,182,255,0.4) 0%, rgba(132,146,166,0.35) 100%)' }}
+            />
+            <div className="rounded-full border bg-white/90 px-3 py-1 text-xs font-semibold text-gray-dark shadow">
+              {line.title}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function TrackItemCard({ item, selected }: { item: MultiLineTimelineItem; selected: boolean }) {
   return (
     <div
@@ -509,7 +564,7 @@ function MultiLineTimelineTrack({
   )
 }
 
-export function MultiLineTimeline({ tracks, weeks, sprintLength = 2, weekHeight = 90 }: MultiLineTimelineProps) {
+export function MultiLineTimeline({ tracks, weeks, sprintLength = 2, weekHeight = 90, milestones = [] }: MultiLineTimelineProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const allDates = tracks.flatMap((track) => track.items.map((item) => parseAtDate(item.at))).filter(Boolean) as Date[]
   const rawStartDate = allDates.length ? new Date(Math.min(...allDates.map((d) => d.getTime()))) : null
@@ -532,6 +587,14 @@ export function MultiLineTimeline({ tracks, weeks, sprintLength = 2, weekHeight 
         totalWeeks={totalWeeks}
         weekHeight={weekHeight}
         sprintLength={sprintLength}
+        padding={guidePadding}
+        topOffset={guideTopOffset}
+      />
+      <MilestoneLines
+        milestones={milestones}
+        startWeekDate={startWeekDate}
+        totalWeeks={totalWeeks}
+        weekHeight={weekHeight}
         padding={guidePadding}
         topOffset={guideTopOffset}
       />

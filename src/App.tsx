@@ -1,136 +1,9 @@
 import './App.css'
-import { MultiLineTimeline, type MultiLineTimelineTrack } from './components/MultiLineTimeline'
+import { MultiLineTimeline } from './components/MultiLineTimeline'
+import { loadBranchTracks, loadMilestones } from './data/loaders'
 
-const branchTracks: MultiLineTimelineTrack[] = [
-  {
-    id: 'main',
-    name: 'main',
-    color: '#1fb6ff',
-    items: [
-      {
-        id: 'main-foundation',
-        title: 'Foundation merged',
-        annotation: '',
-        at: '2025-01-08',
-        endAt: '2025-01-29',
-      },
-      {
-        id: 'main-beta',
-        title: 'Beta drop',
-        annotation: '',
-        at: '2025-01-22',
-        endAt: '2025-01-24',
-      },
-      {
-        id: 'main-tag',
-        title: 'v1.0 tag',
-        annotation: '',
-        at: '2025-02-05',
-        endAt: '2025-02-07',
-      },
-      {
-        id: 'main-hotfix',
-        title: 'Hotfix 1.0.1',
-        annotation: '',
-        at: '2025-02-11',
-        endAt: '2025-02-14',
-      },
-    ],
-  },
-  {
-    id: 'incident',
-    name: 'incident',
-    color: '#ff0000',
-    startWeek: 2,
-    endWeek: 4,
-    items: [
-      {
-        id: 'incident-detected',
-        title: 'Incident detected',
-        annotation: '',
-        at: '2025-01-15',
-        endAt: '2025-01-16',
-      },
-      {
-        id: 'incident-resolved',
-        title: 'Incident resolved',
-        annotation: '',
-        at: '2025-01-16',
-        endAt: '2025-01-17',
-      },
-    ],
-  },
-  {
-    id: 'feature-auth',
-    name: 'feature/auth-redesign',
-    color: '#13ce66',
-    items: [
-      {
-        id: 'auth-start',
-        title: 'Branch cut',
-        annotation: '',
-        at: '2025-01-12',
-        endAt: '2025-01-18',
-      },
-      {
-        id: 'auth-feature-1',
-        title: 'Feature 1',
-        annotation: '',
-        at: '2025-01-14',
-        endAt: '2025-01-15',
-      },
-      {
-        id: 'auth-feature-2',
-        title: 'Feature 2',
-        annotation: '',
-        at: '2025-01-15',
-        endAt: '2025-01-18',
-      },
-      {
-        id: 'auth-review',
-        title: 'Design review',
-        annotation: '',
-        at: '2025-01-16',
-        endAt: '2025-01-17',
-      },
-      {
-        id: 'auth-merge',
-        title: 'Rebased & merged',
-        annotation: '',
-        at: '2025-02-03',
-        endAt: '2025-02-04',
-      },
-    ],
-  },
-  {
-    id: 'feature-api-gateway',
-    name: 'feature/api-gateway',
-    color: '#ff7849',
-    items: [
-      {
-        id: 'api-scaffold',
-        title: 'Edge routes ready',
-        annotation: '',
-        at: '2025-01-10',
-        endAt: '2025-01-12',
-      },
-      {
-        id: 'api-perf',
-        title: 'Perf tuning',
-        annotation: '',
-        at: '2025-01-30',
-        endAt: '2025-02-02',
-      },
-      {
-        id: 'api-merge',
-        title: 'Merged behind flag',
-        annotation: '',
-        at: '2025-02-07',
-        endAt: '2025-02-09',
-      },
-    ],
-  },
-]
+const branchTracks = loadBranchTracks()
+const milestones = loadMilestones()
 
 function App() {
   return (
@@ -144,7 +17,13 @@ function App() {
       <div className="mx-auto flex flex-col gap-10">
         <section>
           <h2 className="text-xl font-bold text-gray-dark p-4">Onboarding</h2>
-          <MultiLineTimeline tracks={branchTracks} weeks={26} sprintLength={2} weekHeight={90} />
+          <MultiLineTimeline
+            tracks={branchTracks}
+            milestones={milestones}
+            weeks={26}
+            sprintLength={2}
+            weekHeight={90}
+          />
         </section>
       </div>
     </div>
