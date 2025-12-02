@@ -27,6 +27,7 @@ type MultiLineTimelineProps = {
 }
 
 export type Milestone = { title: string; at: string }
+type WeekLabelMode = 'weeks' | 'dates'
 
 const DAY_MS = 1000 * 60 * 60 * 24
 const WEEK_MS = DAY_MS * 7
@@ -105,23 +106,109 @@ type ItemCluster = {
   containerHeight: number
 }
 
+function TimelineSettingsDrawer({
+  open,
+  onClose,
+  labelMode,
+  onLabelModeChange,
+  startWeekDate,
+}: {
+  open: boolean
+  onClose: () => void
+  labelMode: WeekLabelMode
+  onLabelModeChange: (mode: WeekLabelMode) => void
+  startWeekDate: Date | null
+}) {
+  if (!open) return null
+
+  const canShowDates = Boolean(startWeekDate)
+
+  return (
+    <div className="fixed inset-0 z-50">
+      <button
+        type="button"
+        aria-label="Close settings"
+        className="absolute inset-0 bg-gray-dark/30 backdrop-blur-[1px]"
+        onClick={onClose}
+      />
+      <div className="absolute right-0 top-0 flex h-full w-[320px] flex-col bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b px-5 py-4">
+          <div>
+            <p className="text-sm font-semibold text-gray-dark">Timeline settings</p>
+            <p className="text-xs text-gray">Adjust how the scale is displayed.</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border px-3 py-1 text-xs font-semibold text-gray-dark hover:bg-gray-light/50"
+          >
+            Close
+          </button>
+        </div>
+        <div className="flex-1 overflow-auto px-5 py-4">
+          <div className="mb-6">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-dark/80">Timeline scale</p>
+            <div className="mt-3 inline-flex rounded-full bg-gray-light/60 p-1 text-[0.75rem] font-semibold text-gray-dark shadow-sm">
+              <button
+                type="button"
+                className={`rounded-full px-3 py-1 transition ${labelMode === 'weeks' ? 'bg-white shadow-sm' : 'hover:bg-white/60'}`}
+                aria-pressed={labelMode === 'weeks'}
+                onClick={() => onLabelModeChange('weeks')}
+              >
+                Weeks
+              </button>
+              <button
+                type="button"
+                className={`rounded-full px-3 py-1 transition ${labelMode === 'dates' ? 'bg-white shadow-sm' : 'hover:bg-white/60'} ${!canShowDates ? 'cursor-not-allowed opacity-50' : ''}`}
+                aria-pressed={labelMode === 'dates'}
+                onClick={() => canShowDates && onLabelModeChange('dates')}
+                disabled={!canShowDates}
+              >
+                Dates
+              </button>
+            </div>
+            {!canShowDates ? (
+              <p className="mt-2 text-xs text-gray">
+                Dates become available once a valid start date is detected.
+              </p>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function WeekRail({
   totalWeeks,
   height,
   sprintLength,
   weekHeight,
   padding,
+  startWeekDate,
+  labelMode,
 }: {
   totalWeeks: number
   height: number
   sprintLength: number
   weekHeight: number
   padding: number
+  startWeekDate: Date | null
+  labelMode: WeekLabelMode
 }) {
   const markers = Array.from({ length: totalWeeks }, (_, i) => i + 1)
+  const labelBaseDate = startWeekDate ? new Date(Date.UTC(startWeekDate.getUTCFullYear(), 0, 1)) : null
+  const formatLabel = (week: number) => {
+    if (labelMode === 'dates' && labelBaseDate) {
+      const weekStartDate = new Date(labelBaseDate.getTime() + (week - 1) * WEEK_MS)
+      return weekStartDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+    }
+    return `Week ${week}`
+  }
+
   return (
     <div className="min-w-[200px] pl-4">
-      <div className="mb-4 text-sm font-semibold text-gray-dark">Weeks</div>
+      <div className="mb-4 text-sm font-semibold text-gray-dark pr-3">Weeks</div>
       <div className="relative overflow-hidden" style={{ padding }}>
         <div className="relative" style={{ height }}>
           <div
@@ -141,7 +228,7 @@ function WeekRail({
                     aria-hidden
                   />
                   <div className="flex items-center gap-2 rounded-full bg-gray-light/30 px-2 py-1">
-                    <span className="text-xs font-semibold text-gray-dark">Week {week}</span>
+                    <span className="text-xs font-semibold text-gray-dark">{formatLabel(week)}</span>
                   </div>
                 </div>
               </div>
@@ -588,77 +675,103 @@ function MultiLineTimelineTrack({
 export function MultiLineTimeline({ tracks, weeks, sprintLength = 2, weekHeight = 90, milestones = [] }: MultiLineTimelineProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedMilestoneId, setSelectedMilestoneId] = useState<string | null>(null)
+  const [weekLabelMode, setWeekLabelMode] = useState<WeekLabelMode>('weeks')
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const allDates = tracks.flatMap((track) => track.items.map((item) => parseAtDate(item.at))).filter(Boolean) as Date[]
   const rawStartDate = allDates.length ? new Date(Math.min(...allDates.map((d) => d.getTime()))) : null
   const rawEndDate = allDates.length ? new Date(Math.max(...allDates.map((d) => d.getTime()))) : null
-  const startWeekDate = rawStartDate ? getStartOfWeek(rawStartDate) : null
+  const originDate = rawStartDate ? normalizeDateToUTC(new Date(Date.UTC(rawStartDate.getUTCFullYear(), 0, 1))) : null
   const endWeekDate = rawEndDate ? getEndOfWeek(rawEndDate) : null
+  const timelineStartDate = originDate
   const dataWeeks =
-    startWeekDate && endWeekDate
-      ? Math.max(1, Math.floor((endWeekDate.getTime() - startWeekDate.getTime()) / WEEK_MS) + 1)
+    timelineStartDate && endWeekDate
+      ? Math.max(1, Math.floor((endWeekDate.getTime() - timelineStartDate.getTime()) / WEEK_MS) + 1)
       : 1
   const totalWeeks = Math.max(weeks ?? dataWeeks, dataWeeks)
   const computedHeight = Math.max(1, totalWeeks) * weekHeight
   const guidePadding = 14
   const headerOffset = 36 // approx height of track/week label + margin
   const guideTopOffset = headerOffset + guidePadding
+  const contentBlurClass = settingsOpen ? 'blur-[2px]' : ''
 
   return (
-    <div className="relative">
-      <SprintGuides
-        totalWeeks={totalWeeks}
-        weekHeight={weekHeight}
-        sprintLength={sprintLength}
-        padding={guidePadding}
-        topOffset={guideTopOffset}
-      />
-      <MilestoneLines
-        milestones={milestones}
-        startWeekDate={startWeekDate}
-        totalWeeks={totalWeeks}
-        weekHeight={weekHeight}
-        padding={guidePadding}
-        topOffset={guideTopOffset}
-        selectedId={selectedMilestoneId}
-        onSelect={setSelectedMilestoneId}
-      />
-      <div className="flex gap-8 relative">
-        <WeekRail
+    <div className="relative pt-2">
+      <div className="absolute right-0 top-0 z-30 flex items-center gap-2 pr-1 pointer-events-auto">
+        <button
+          type="button"
+          onClick={() => setSettingsOpen(true)}
+          aria-expanded={settingsOpen}
+          className="flex items-center gap-2 rounded-full border border-gray-light bg-white px-3 py-1.5 text-xs font-semibold text-gray-dark shadow-sm hover:bg-gray-light/60 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-light"
+        >
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-gray-dark shadow-[0_0_0_2px_#e2e8f0,_0_0_0_4px_rgba(0,0,0,0.04)]" aria-hidden />
+          Settings
+        </button>
+      </div>
+      <div className={`relative ${contentBlurClass} transition filter`}>
+        <SprintGuides
           totalWeeks={totalWeeks}
-          height={computedHeight}
+          weekHeight={weekHeight}
           sprintLength={sprintLength}
+          padding={guidePadding}
+          topOffset={guideTopOffset}
+        />
+        <MilestoneLines
+          milestones={milestones}
+          startWeekDate={timelineStartDate}
+          totalWeeks={totalWeeks}
           weekHeight={weekHeight}
           padding={guidePadding}
+          topOffset={guideTopOffset}
+          selectedId={selectedMilestoneId}
+          onSelect={setSelectedMilestoneId}
         />
-        <div className="flex gap-10">
-          {tracks.map((track) => {
-            const clampedStartWeek = startWeekDate
-              ? Math.max(1, Math.min(totalWeeks, Math.floor(track.startWeek ?? 1)))
-              : 1
-            const clampedEndWeek = startWeekDate
-              ? Math.max(clampedStartWeek, Math.min(totalWeeks, Math.floor(track.endWeek ?? totalWeeks)))
-              : totalWeeks
-            const trackWeeks = Math.max(1, clampedEndWeek - clampedStartWeek + 1)
-            const trackHeight = trackWeeks * weekHeight
-            const offsetTop = (clampedStartWeek - 1) * weekHeight
+        <div className="flex gap-8 relative">
+          <WeekRail
+            totalWeeks={totalWeeks}
+            height={computedHeight}
+            sprintLength={sprintLength}
+            weekHeight={weekHeight}
+            padding={guidePadding}
+            startWeekDate={timelineStartDate}
+            labelMode={weekLabelMode}
+          />
+          <div className="flex gap-10">
+            {tracks.map((track) => {
+              const clampedStartWeek = timelineStartDate
+                ? Math.max(1, Math.min(totalWeeks, Math.floor(track.startWeek ?? 1)))
+                : 1
+              const clampedEndWeek = timelineStartDate
+                ? Math.max(clampedStartWeek, Math.min(totalWeeks, Math.floor(track.endWeek ?? totalWeeks)))
+                : totalWeeks
+              const trackWeeks = Math.max(1, clampedEndWeek - clampedStartWeek + 1)
+              const trackHeight = trackWeeks * weekHeight
+              const offsetTop = (clampedStartWeek - 1) * weekHeight
 
-            return (
-              <MultiLineTimelineTrack
-                key={track.id}
-                track={track}
-                trackHeight={trackHeight}
-                startWeekDate={startWeekDate}
-                totalWeeks={totalWeeks}
-                offsetTop={offsetTop}
-                guidePadding={guidePadding}
-                weekHeight={weekHeight}
-                selectedId={selectedId}
-                onSelect={(id) => setSelectedId(id)}
-              />
-            )
-          })}
+              return (
+                <MultiLineTimelineTrack
+                  key={track.id}
+                  track={track}
+                  trackHeight={trackHeight}
+                  startWeekDate={timelineStartDate}
+                  totalWeeks={totalWeeks}
+                  offsetTop={offsetTop}
+                  guidePadding={guidePadding}
+                  weekHeight={weekHeight}
+                  selectedId={selectedId}
+                  onSelect={(id) => setSelectedId(id)}
+                />
+              )
+            })}
+          </div>
         </div>
       </div>
+      <TimelineSettingsDrawer
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        labelMode={weekLabelMode}
+        onLabelModeChange={setWeekLabelMode}
+        startWeekDate={timelineStartDate}
+      />
     </div>
   )
 }

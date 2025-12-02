@@ -8,7 +8,7 @@
         "id": "main-foundation",
         "title": "Foundation merged",
         "annotation": "",
-        "at": "2025-01-08",
+        "at": "2025-01-01",
         "endAt": "2025-01-29"
       },
       {
@@ -38,7 +38,7 @@
     "id": "incident",
     "name": "incident",
     "color": "#ff0000",
-    "startWeek": 2,
+    "startWeek": 3,
     "endWeek": 4,
     "items": [
       {
