@@ -20,7 +20,7 @@ function App() {
           <MultiLineTimeline
             tracks={branchTracks}
             milestones={milestones}
-            weeks={26}
+            weeks={52}
             sprintLength={2}
             weekHeight={90}
           />

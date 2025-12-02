@@ -188,14 +188,6 @@ function SprintGuides({
                   position: 'relative',
                 }}
               />
-              <div
-                className="absolute left-0 right-0"
-                style={{
-                  top: 0,
-                  height: 1,
-                  background: 'rgba(132,146,166,0.55)',
-                }}
-              />
             </div>
           )
         })}
