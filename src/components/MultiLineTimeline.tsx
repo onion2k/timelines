@@ -349,6 +349,8 @@ function MilestoneLines({
   weekHeight,
   padding,
   topOffset,
+  selectedId,
+  onSelect,
 }: {
   milestones: Milestone[]
   startWeekDate: Date | null
@@ -356,6 +358,8 @@ function MilestoneLines({
   weekHeight: number
   padding: number
   topOffset: number
+  selectedId: string | null
+  onSelect: (id: string | null) => void
 }) {
   if (!milestones.length || !startWeekDate || totalWeeks < 1) return null
 
@@ -372,21 +376,46 @@ function MilestoneLines({
   if (!lines.length) return null
 
   return (
-    <div className="pointer-events-none absolute inset-0" aria-hidden style={{ top: topOffset, left: 0, right: 0 }}>
-      <div className="relative" style={{ height: totalWeeks * weekHeight, paddingTop: padding, paddingBottom: padding }}>
+    <div
+      className="absolute inset-0"
+      style={{ top: topOffset, left: 0, right: 0, pointerEvents: 'none', zIndex: 20 }}
+    >
+      <div
+        className="relative"
+        style={{ height: totalWeeks * weekHeight, paddingTop: padding, paddingBottom: padding }}
+      >
         {lines.map((line) => (
           <div
             key={`milestone-${line.title}-${line.at}`}
-            className="absolute left-0 right-0 flex items-center justify-end gap-3"
+            className="absolute left-0 right-0 flex items-center"
             style={{ top: line.top }}
           >
             <div
               className="h-px flex-1"
-              style={{ background: 'linear-gradient(90deg, rgba(31,182,255,0.4) 0%, rgba(132,146,166,0.35) 100%)' }}
+              style={{
+                background:
+                  selectedId === `${line.title}-${line.at}`
+                    ? 'linear-gradient(90deg, rgba(31,182,255,1) 0%, rgba(31,182,255,0.4) 100%)'
+                    : 'linear-gradient(90deg, rgba(132,146,166,0.4) 0%, rgba(132,146,166,0.2) 100%)',
+                height: selectedId === `${line.title}-${line.at}` ? 2 : 1,
+              }}
             />
-            <div className="rounded-full border bg-white/90 px-3 py-1 text-xs font-semibold text-gray-dark shadow">
-              {line.title}
-            </div>
+            <button
+              type="button"
+              onClick={() => onSelect(selectedId === `${line.title}-${line.at}` ? null : `${line.title}-${line.at}`)}
+              className="relative ml-3 mr-4 flex items-center gap-2 text-xs font-semibold text-gray-dark focus:outline-none"
+              style={{ pointerEvents: 'auto' }}
+            >
+              <span
+                className="h-2.5 w-2.5 rounded-full border"
+                style={{
+                  backgroundColor: selectedId === `${line.title}-${line.at}` ? '#1fb6ff' : '#f7fafc',
+                  borderColor: selectedId === `${line.title}-${line.at}` ? '#1fb6ff' : '#cfd6e1',
+                  boxShadow: selectedId === `${line.title}-${line.at}` ? '0 0 0 4px rgba(31,182,255,0.15)' : 'none',
+                }}
+              />
+              <span>{line.title}</span>
+            </button>
           </div>
         ))}
       </div>
@@ -566,6 +595,7 @@ function MultiLineTimelineTrack({
 
 export function MultiLineTimeline({ tracks, weeks, sprintLength = 2, weekHeight = 90, milestones = [] }: MultiLineTimelineProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedMilestoneId, setSelectedMilestoneId] = useState<string | null>(null)
   const allDates = tracks.flatMap((track) => track.items.map((item) => parseAtDate(item.at))).filter(Boolean) as Date[]
   const rawStartDate = allDates.length ? new Date(Math.min(...allDates.map((d) => d.getTime()))) : null
   const rawEndDate = allDates.length ? new Date(Math.max(...allDates.map((d) => d.getTime()))) : null
@@ -597,6 +627,8 @@ export function MultiLineTimeline({ tracks, weeks, sprintLength = 2, weekHeight 
         weekHeight={weekHeight}
         padding={guidePadding}
         topOffset={guideTopOffset}
+        selectedId={selectedMilestoneId}
+        onSelect={setSelectedMilestoneId}
       />
       <div className="flex gap-8 relative">
         <WeekRail
