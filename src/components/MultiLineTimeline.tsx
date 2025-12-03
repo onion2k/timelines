@@ -28,12 +28,12 @@ type MultiLineTimelineProps = {
 
 export type Milestone = { title: string; at: string }
 type WeekLabelMode = 'weeks' | 'dates'
+type ScaleOption = 'small' | 'medium' | 'large'
 
 const DAY_MS = 1000 * 60 * 60 * 24
 const WEEK_MS = DAY_MS * 7
 const CARD_HEIGHT_ESTIMATE = 70
 const CARD_ANCHOR_OFFSET = 14
-const STACK_X_OFFSET = 18
 const STACK_SLOP = 4
 const STACK_LEFT_BASE = 16
 const BASE_Z_INDEX = 100
@@ -112,12 +112,16 @@ function TimelineSettingsDrawer({
   labelMode,
   onLabelModeChange,
   startWeekDate,
+  scale,
+  onScaleChange,
 }: {
   open: boolean
   onClose: () => void
   labelMode: WeekLabelMode
   onLabelModeChange: (mode: WeekLabelMode) => void
   startWeekDate: Date | null
+  scale: ScaleOption
+  onScaleChange: (scale: ScaleOption) => void
 }) {
   if (!open) return null
 
@@ -172,6 +176,28 @@ function TimelineSettingsDrawer({
                 Dates become available once a valid start date is detected.
               </p>
             ) : null}
+          </div>
+          <div className="mb-6">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-dark/80">Scale</p>
+            <div className="mt-3 flex flex-col gap-2 text-sm font-semibold text-gray-dark">
+              {([
+                { value: 'small', label: 'Small' },
+                { value: 'medium', label: 'Medium' },
+                { value: 'large', label: 'Large' },
+              ] as const).map((option) => (
+                <label key={option.value} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="timeline-scale"
+                    value={option.value}
+                    checked={scale === option.value}
+                    onChange={() => onScaleChange(option.value)}
+                    className="h-4 w-4 border-gray-light text-gray-dark focus:ring-1 focus:ring-offset-1 focus:ring-gray-dark"
+                  />
+                  <span>{option.label}</span>
+                </label>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -546,11 +572,12 @@ function TrackItemRow({
     <button
       type="button"
       onClick={() => onSelect(item.id)}
-      className="absolute right-0 text-left focus:outline-none"
+      className="absolute text-left w-full focus:outline-none"
       style={{
-        left: `${leftOffset}px`,
+        left: 0,
         top: `${topOffset}px`,
         zIndex,
+        transform: `translateX(${leftOffset}px)`,
       }}
     >
       <TrackItemCard item={item} selected={selected} />
@@ -589,7 +616,7 @@ function TrackItemCluster({
           <TrackItemRow
             key={entry.item.id}
             item={entry.item}
-            leftOffset={idx * STACK_X_OFFSET}
+            leftOffset={0}
             topOffset={entry.cardTop - cluster.containerTop}
             zIndex={selectedId === entry.item.id ? SELECTED_Z_INDEX : BASE_Z_INDEX - idx}
             selected={selectedId === entry.item.id}
@@ -672,10 +699,17 @@ function MultiLineTimelineTrack({
   )
 }
 
-export function MultiLineTimeline({ tracks, weeks, sprintLength = 2, weekHeight = 90, milestones = [] }: MultiLineTimelineProps) {
+export function MultiLineTimeline({
+  tracks,
+  weeks,
+  sprintLength = 2,
+  weekHeight = 90,
+  milestones = [],
+}: MultiLineTimelineProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedMilestoneId, setSelectedMilestoneId] = useState<string | null>(null)
   const [weekLabelMode, setWeekLabelMode] = useState<WeekLabelMode>('weeks')
+  const [scale, setScale] = useState<ScaleOption>('medium')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const allDates = tracks.flatMap((track) => track.items.map((item) => parseAtDate(item.at))).filter(Boolean) as Date[]
   const rawStartDate = allDates.length ? new Date(Math.min(...allDates.map((d) => d.getTime()))) : null
@@ -688,7 +722,13 @@ export function MultiLineTimeline({ tracks, weeks, sprintLength = 2, weekHeight 
       ? Math.max(1, Math.floor((endWeekDate.getTime() - timelineStartDate.getTime()) / WEEK_MS) + 1)
       : 1
   const totalWeeks = Math.max(weeks ?? dataWeeks, dataWeeks)
-  const computedHeight = Math.max(1, totalWeeks) * weekHeight
+  const weekHeightByScale: Record<ScaleOption, number> = {
+    small: Math.round(weekHeight * 0.8),
+    medium: weekHeight,
+    large: Math.round(weekHeight * 1.2),
+  }
+  const effectiveWeekHeight = weekHeightByScale[scale]
+  const computedHeight = Math.max(1, totalWeeks) * effectiveWeekHeight
   const guidePadding = 14
   const headerOffset = 36 // approx height of track/week label + margin
   const guideTopOffset = headerOffset + guidePadding
@@ -710,7 +750,7 @@ export function MultiLineTimeline({ tracks, weeks, sprintLength = 2, weekHeight 
       <div className={`relative ${contentBlurClass} transition filter`}>
         <SprintGuides
           totalWeeks={totalWeeks}
-          weekHeight={weekHeight}
+          weekHeight={effectiveWeekHeight}
           sprintLength={sprintLength}
           padding={guidePadding}
           topOffset={guideTopOffset}
@@ -719,7 +759,7 @@ export function MultiLineTimeline({ tracks, weeks, sprintLength = 2, weekHeight 
           milestones={milestones}
           startWeekDate={timelineStartDate}
           totalWeeks={totalWeeks}
-          weekHeight={weekHeight}
+          weekHeight={effectiveWeekHeight}
           padding={guidePadding}
           topOffset={guideTopOffset}
           selectedId={selectedMilestoneId}
@@ -730,7 +770,7 @@ export function MultiLineTimeline({ tracks, weeks, sprintLength = 2, weekHeight 
             totalWeeks={totalWeeks}
             height={computedHeight}
             sprintLength={sprintLength}
-            weekHeight={weekHeight}
+            weekHeight={effectiveWeekHeight}
             padding={guidePadding}
             startWeekDate={timelineStartDate}
             labelMode={weekLabelMode}
@@ -744,8 +784,8 @@ export function MultiLineTimeline({ tracks, weeks, sprintLength = 2, weekHeight 
                 ? Math.max(clampedStartWeek, Math.min(totalWeeks, Math.floor(track.endWeek ?? totalWeeks)))
                 : totalWeeks
               const trackWeeks = Math.max(1, clampedEndWeek - clampedStartWeek + 1)
-              const trackHeight = trackWeeks * weekHeight
-              const offsetTop = (clampedStartWeek - 1) * weekHeight
+              const trackHeight = trackWeeks * effectiveWeekHeight
+              const offsetTop = (clampedStartWeek - 1) * effectiveWeekHeight
 
               return (
                 <MultiLineTimelineTrack
@@ -756,7 +796,7 @@ export function MultiLineTimeline({ tracks, weeks, sprintLength = 2, weekHeight 
                   totalWeeks={totalWeeks}
                   offsetTop={offsetTop}
                   guidePadding={guidePadding}
-                  weekHeight={weekHeight}
+                  weekHeight={effectiveWeekHeight}
                   selectedId={selectedId}
                   onSelect={(id) => setSelectedId(id)}
                 />
@@ -771,6 +811,8 @@ export function MultiLineTimeline({ tracks, weeks, sprintLength = 2, weekHeight 
         labelMode={weekLabelMode}
         onLabelModeChange={setWeekLabelMode}
         startWeekDate={timelineStartDate}
+        scale={scale}
+        onScaleChange={setScale}
       />
     </div>
   )
