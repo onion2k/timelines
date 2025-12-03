@@ -1,4 +1,4 @@
-export { MultiLineTimeline } from './multi-line-timeline/MultiLineTimeline'
+export { MultiLineTimeline } from './MultiLineTimeline'
 export {
   type Milestone,
   type MultiLineTimelineItem,
@@ -6,4 +6,4 @@ export {
   type MultiLineTimelineTrack,
   type ScaleOption,
   type WeekLabelMode,
-} from './multi-line-timeline/types'
+} from './types'
