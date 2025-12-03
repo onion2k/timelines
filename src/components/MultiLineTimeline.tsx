@@ -747,7 +747,7 @@ export function MultiLineTimeline({
           Settings
         </button>
       </div>
-      <div className={`relative ${contentBlurClass} transition filter`}>
+      <div className={`relative ${contentBlurClass} transition filter`} data-timeline-body>
         <SprintGuides
           totalWeeks={totalWeeks}
           weekHeight={effectiveWeekHeight}

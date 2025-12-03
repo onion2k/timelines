@@ -68,6 +68,13 @@
         "annotation": "",
         "at": "2025-01-31",
         "endAt": "2025-02-01"
+      },
+      {
+        "id": "incident-detected",
+        "title": "Incident detected",
+        "annotation": "",
+        "at": "2025-04-01",
+        "endAt": "2025-05-01"
       }
     ]
   },
