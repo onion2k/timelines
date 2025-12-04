@@ -1,4 +1,5 @@
 export { MultiLineTimeline } from './MultiLineTimeline'
+export { TimelineMinimap } from './TimelineMinimap'
 export {
   type Milestone,
   type MultiLineTimelineItem,
