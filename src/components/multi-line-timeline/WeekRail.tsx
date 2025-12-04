@@ -1,4 +1,6 @@
+import { useRef, useState, type MouseEvent } from 'react'
 import { WEEK_MS } from './constants'
+import { clampNumber } from './utils'
 import { type WeekLabelMode } from './types'
 
 type WeekRailProps = {
@@ -9,6 +11,8 @@ type WeekRailProps = {
   padding: number
   startWeekDate: Date | null
   labelMode: WeekLabelMode
+  viewRange: { start: number; end: number } | null
+  onRangeSelect: (range: { start: number; end: number } | null) => void
 }
 
 export function WeekRail({
@@ -19,7 +23,11 @@ export function WeekRail({
   padding,
   startWeekDate,
   labelMode,
+  viewRange,
+  onRangeSelect,
 }: WeekRailProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const [dragRange, setDragRange] = useState<{ start: number; end: number } | null>(null)
   const markers = Array.from({ length: totalWeeks }, (_, i) => i + 1)
   const labelBaseDate = startWeekDate ? new Date(Date.UTC(startWeekDate.getUTCFullYear(), 0, 1)) : null
   const formatLabel = (week: number) => {
@@ -30,16 +38,74 @@ export function WeekRail({
     return `Week ${week}`
   }
 
+  const toWeekFromEvent = (clientY: number) => {
+    const container = containerRef.current
+    if (!container) return null
+    const rect = container.getBoundingClientRect()
+    const offsetY = clientY - rect.top - padding
+    const raw = offsetY / weekHeight + 1
+    const week = Math.floor(raw)
+    return clampNumber(week, 1, totalWeeks)
+  }
+
+  const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
+    const startWeek = toWeekFromEvent(e.clientY)
+    if (!startWeek) return
+    const range = { start: startWeek, end: startWeek }
+    setDragRange(range)
+  }
+
+  const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
+    if (!dragRange) return
+    const currentWeek = toWeekFromEvent(e.clientY)
+    if (!currentWeek) return
+    setDragRange({
+      start: Math.min(dragRange.start, currentWeek),
+      end: Math.max(dragRange.start, currentWeek),
+    })
+  }
+
+  const finalizeRange = () => {
+    if (dragRange) {
+      if (dragRange.start === dragRange.end) {
+        onRangeSelect(null)
+      } else {
+        onRangeSelect(dragRange)
+      }
+      setDragRange(null)
+    }
+  }
+
+  const selection = dragRange ?? viewRange
+
   return (
-    <div className="min-w-[200px] pl-4">
+    <div className="min-w-[200px] pl-4 select-none">
       <div className="mb-4 text-sm font-semibold text-gray-dark pr-3">Weeks</div>
-      <div className="relative overflow-hidden" style={{ padding }}>
+      <div
+        className="relative overflow-hidden"
+        style={{ padding }}
+        ref={containerRef}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={finalizeRange}
+        onMouseLeave={finalizeRange}
+      >
         <div className="relative" style={{ height }}>
           <div
             className="absolute left-4 top-0 h-full w-[2px]"
             style={{ background: 'linear-gradient(180deg, #d3dce6 0%, #e6ebf2 100%)' }}
             aria-hidden
           />
+          {selection ? (
+            <div
+              className="absolute left-0 right-0 rounded-lg bg-sky-200/30 border border-sky-400/50"
+              style={{
+                top: (selection.start - 1) * weekHeight,
+                height: (selection.end - selection.start + 1) * weekHeight,
+              }}
+              aria-hidden
+            />
+          ) : null}
           {markers.map((week) => {
             const topPx = (week - 1) * weekHeight
             const isSprintBoundary = sprintLength > 0 && (week - 1) % sprintLength === 0

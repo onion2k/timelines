@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { WEEK_MS } from './constants'
 import { MilestoneLines } from './MilestoneLines'
 import { SprintGuides } from './SprintGuides'
@@ -20,6 +20,15 @@ export function MultiLineTimeline({
   const [weekLabelMode, setWeekLabelMode] = useState<WeekLabelMode>('weeks')
   const [scale, setScale] = useState<ScaleOption>('medium')
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [viewRange, setViewRange] = useState<{ start: number; end: number } | null>(null)
+  const [viewportHeight, setViewportHeight] = useState(() => (typeof window !== 'undefined' ? window.innerHeight : 900))
+  const timelineBodyRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handleResize = () => setViewportHeight(window.innerHeight)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
   const allDates = tracks.flatMap((track) => track.items.map((item) => parseAtDate(item.at))).filter(Boolean) as Date[]
   const rawStartDate = allDates.length ? new Date(Math.min(...allDates.map((d) => d.getTime()))) : null
   const rawEndDate = allDates.length ? new Date(Math.max(...allDates.map((d) => d.getTime()))) : null
@@ -31,21 +40,46 @@ export function MultiLineTimeline({
       ? Math.max(1, Math.floor((endWeekDate.getTime() - timelineStartDate.getTime()) / WEEK_MS) + 1)
       : 1
   const totalWeeks = Math.max(weeks ?? dataWeeks, dataWeeks)
+  const viewStartWeek = viewRange ? Math.max(1, Math.min(totalWeeks, viewRange.start)) : 1
+  const viewEndWeek = viewRange ? Math.max(viewStartWeek, Math.min(totalWeeks, viewRange.end)) : totalWeeks
+  const visibleWeeks = Math.max(1, viewEndWeek - viewStartWeek + 1)
   const weekHeightByScale: Record<ScaleOption, number> = {
     small: Math.round(weekHeight * 0.8),
     medium: weekHeight,
     large: Math.round(weekHeight * 1.2),
   }
-  const effectiveWeekHeight = weekHeightByScale[scale]
-  const computedHeight = Math.max(1, totalWeeks) * effectiveWeekHeight
+  const baseWeekHeight = weekHeightByScale[scale]
+  const effectiveWeekHeight = viewRange ? viewportHeight / visibleWeeks : baseWeekHeight
   const guidePadding = 14
   const headerOffset = 36 // approx height of track/week label + margin
   const guideTopOffset = headerOffset + guidePadding
   const contentBlurClass = settingsOpen ? 'blur-[2px]' : ''
+  const viewStartDate = timelineStartDate
+    ? new Date(timelineStartDate.getTime() + (viewStartWeek - 1) * WEEK_MS)
+    : null
+
+  useEffect(() => {
+    if (!viewRange || typeof window === 'undefined') return
+    const body = timelineBodyRef.current
+    if (!body) return
+    const rect = body.getBoundingClientRect()
+    const pageTop = rect.top + window.scrollY
+    const target = pageTop + guideTopOffset + (viewStartWeek - 1) * effectiveWeekHeight
+    window.scrollTo({ top: Math.max(0, target - 24), behavior: 'smooth' })
+  }, [viewRange, viewStartWeek, effectiveWeekHeight, guideTopOffset])
 
   return (
     <div className="relative pt-2">
       <div className="absolute right-0 top-0 z-30 flex items-center gap-2 pr-1 pointer-events-auto">
+        {viewRange ? (
+          <button
+            type="button"
+            onClick={() => setViewRange(null)}
+            className="rounded-full border border-gray-light bg-white px-3 py-1.5 text-xs font-semibold text-gray-dark shadow-sm hover:bg-gray-light/60 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-light"
+          >
+            Reset zoom
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={() => setSettingsOpen(true)}
@@ -56,7 +90,11 @@ export function MultiLineTimeline({
           Settings
         </button>
       </div>
-      <div className={`relative ${contentBlurClass} transition filter`} data-timeline-body>
+      <div
+        className={`relative ${contentBlurClass} transition filter`}
+        data-timeline-body
+        ref={timelineBodyRef}
+      >
         <SprintGuides
           totalWeeks={totalWeeks}
           weekHeight={effectiveWeekHeight}
@@ -77,21 +115,25 @@ export function MultiLineTimeline({
         <div className="flex gap-8 relative">
           <WeekRail
             totalWeeks={totalWeeks}
-            height={computedHeight}
+            height={totalWeeks * effectiveWeekHeight}
             sprintLength={sprintLength}
             weekHeight={effectiveWeekHeight}
             padding={guidePadding}
             startWeekDate={timelineStartDate}
             labelMode={weekLabelMode}
+            viewRange={viewRange}
+            onRangeSelect={(range) => setViewRange(range)}
           />
           <div className="flex gap-10">
             {tracks.map((track) => {
-              const clampedStartWeek = timelineStartDate
+              const clampedStartWeekGlobal = timelineStartDate
                 ? Math.max(1, Math.min(totalWeeks, Math.floor(track.startWeek ?? 1)))
                 : 1
-              const clampedEndWeek = timelineStartDate
-                ? Math.max(clampedStartWeek, Math.min(totalWeeks, Math.floor(track.endWeek ?? totalWeeks)))
+              const clampedEndWeekGlobal = timelineStartDate
+                ? Math.max(clampedStartWeekGlobal, Math.min(totalWeeks, Math.floor(track.endWeek ?? totalWeeks)))
                 : totalWeeks
+              const clampedStartWeek = clampedStartWeekGlobal
+              const clampedEndWeek = clampedEndWeekGlobal
               const trackWeeks = Math.max(1, clampedEndWeek - clampedStartWeek + 1)
               const trackHeight = trackWeeks * effectiveWeekHeight
               const offsetTop = (clampedStartWeek - 1) * effectiveWeekHeight

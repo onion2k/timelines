@@ -29,8 +29,8 @@ export function MilestoneLines({
     .map((m) => {
       const atDate = parseAtDate(m.at)
       if (!atDate) return null
-      const diffWeeks = (atDate.getTime() - startWeekDate.getTime()) / WEEK_MS
-      const top = clampNumber(diffWeeks * weekHeight, 0, totalWeeks * weekHeight)
+      const diffWeeksFromStart = (atDate.getTime() - startWeekDate.getTime()) / WEEK_MS
+      const top = diffWeeksFromStart * weekHeight
       return { ...m, top }
     })
     .filter(Boolean) as { title: string; at: string; top: number }[]
