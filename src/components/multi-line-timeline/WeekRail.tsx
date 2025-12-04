@@ -77,6 +77,8 @@ export function WeekRail({
   }
 
   const selection = dragRange ?? viewRange
+  const selectionTop = selection ? (selection.start - 1) * weekHeight + 2 : 0
+  const selectionHeight = selection ? Math.max(weekHeight, (selection.end - selection.start + 1) * weekHeight - 4) : 0
 
   return (
     <div className="min-w-[200px] pl-4 select-none">
@@ -98,10 +100,10 @@ export function WeekRail({
           />
           {selection ? (
             <div
-              className="absolute left-0 right-0 rounded-lg bg-sky-200/30 border border-sky-400/50"
+              className="absolute left-0 right-0 bg-sky-200/30 border border-sky-400/50"
               style={{
-                top: (selection.start - 1) * weekHeight,
-                height: (selection.end - selection.start + 1) * weekHeight,
+                top: selectionTop,
+                height: selectionHeight,
               }}
               aria-hidden
             />
@@ -111,10 +113,13 @@ export function WeekRail({
             const isSprintBoundary = sprintLength > 0 && (week - 1) % sprintLength === 0
             return (
               <div key={week} className="absolute left-0 right-0" style={{ top: topPx }}>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-5 pl-6">
                   <span
-                    className="h-3 w-3 rounded-full"
-                    style={{ backgroundColor: isSprintBoundary ? '#ff7849' : '#8492a6' }}
+                    className="h-3 w-3 rounded-full absolute -translate-x-1/2"
+                    style={{
+                      backgroundColor: isSprintBoundary ? '#ff7849' : '#8492a6',
+                      left: 'calc(1rem + 1px)', // align dot center with the week line center
+                    }}
                     aria-hidden
                   />
                   <div className="flex items-center gap-2 rounded-full bg-gray-light/30 px-2 py-1">

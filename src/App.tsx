@@ -132,7 +132,7 @@ function TimelineMinimap({
 
   return (
     <div
-      className="fixed bottom-4 right-4 z-40 rounded-xl border border-gray-light bg-white/80 shadow-lg backdrop-blur"
+      className="fixed bottom-4 right-4 z-40 rounded-xl bg-white/80 shadow-lg backdrop-blur"
       style={{ width, height: minimapHeight }}
     >
       <div className="relative h-full w-full overflow-hidden">
