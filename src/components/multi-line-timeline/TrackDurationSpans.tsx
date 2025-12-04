@@ -6,7 +6,7 @@ export function TrackDurationSpans({ spans, color }: { spans: DurationSpan[]; co
       {spans.map((span) => (
         <div
           key={`${span.id}-span`}
-          className="absolute w-[12px]"
+          className="absolute w-3"
           style={{
             left: '0.6rem',
             transform: 'translateX(-50%)',

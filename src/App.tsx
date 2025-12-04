@@ -19,10 +19,6 @@ function TimelineMinimap({
   const timelineMeta = useMemo(() => {
     const DAY_MS = 1000 * 60 * 60 * 24
     const WEEK_MS = DAY_MS * 7
-    const clampNumber = (value: number, min: number, max: number) => {
-      if (Number.isNaN(value)) return min
-      return Math.min(max, Math.max(min, value))
-    }
     const normalizeDateToUTC = (date: Date) =>
       new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
     const getEndOfWeek = (date: Date) => {

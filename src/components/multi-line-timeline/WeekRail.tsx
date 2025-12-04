@@ -94,7 +94,7 @@ export function WeekRail({
       >
         <div className="relative" style={{ height }}>
           <div
-            className="absolute left-4 top-0 h-full w-[2px]"
+            className="absolute left-4 top-0 h-full w-0.5"
             style={{ background: 'linear-gradient(180deg, #d3dce6 0%, #e6ebf2 100%)' }}
             aria-hidden
           />
