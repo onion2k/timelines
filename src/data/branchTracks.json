@@ -2,33 +2,33 @@
   {
     "id": "main",
     "name": "main",
-    "color": "#1fb6ff",
+    "colour": "#1fb6ff",
     "items": [
       {
         "id": "main-foundation",
-        "title": "Foundation merged",
-        "annotation": "",
+        "name": "Foundation merged",
+        "type": "Bug",
         "at": "2025-01-01",
         "endAt": "2025-01-29"
       },
       {
         "id": "main-beta",
-        "title": "Beta drop",
-        "annotation": "",
+        "name": "Beta drop",
+        "type": "Bug",
         "at": "2025-01-22",
         "endAt": "2025-01-24"
       },
       {
         "id": "main-tag",
-        "title": "v1.0 tag",
-        "annotation": "",
+        "name": "v1.0 tag",
+        "type": "Epic",
         "at": "2025-02-05",
         "endAt": "2025-02-07"
       },
       {
         "id": "main-hotfix",
-        "title": "Hotfix 1.0.1",
-        "annotation": "",
+        "name": "Hotfix 1.0.1",
+        "type": "Spike",
         "at": "2025-02-11",
         "endAt": "2025-02-14"
       }
@@ -37,42 +37,42 @@
   {
     "id": "incident",
     "name": "incident",
-    "color": "#ff0000",
+    "colour": "#ff0000",
     "startWeek": 2,
     "endWeek": 20,
     "items": [
       {
         "id": "incident-detected",
-        "title": "Incident detected",
-        "annotation": "",
+        "name": "Incident detected",
+        "type": "",
         "at": "2025-01-14",
         "endAt": "2025-01-16"
       },
       {
         "id": "incident-resolved",
-        "title": "Incident resolved",
-        "annotation": "",
+        "name": "Incident resolved",
+        "type": "",
         "at": "2025-01-16",
         "endAt": "2025-01-17"
       },
       {
         "id": "incident-detected",
-        "title": "Incident detected",
-        "annotation": "",
+        "name": "Incident detected",
+        "type": "",
         "at": "2025-01-30",
         "endAt": "2025-02-01"
       },
       {
         "id": "incident-detected",
-        "title": "Incident detected",
-        "annotation": "",
+        "name": "Incident detected",
+        "type": "",
         "at": "2025-01-31",
         "endAt": "2025-02-01"
       },
       {
         "id": "incident-detected",
-        "title": "Incident detected",
-        "annotation": "",
+        "name": "Incident detected",
+        "type": "",
         "at": "2025-04-01",
         "endAt": "2025-05-01"
       }
@@ -81,40 +81,40 @@
   {
     "id": "feature-auth",
     "name": "feature/auth-redesign",
-    "color": "#13ce66",
+    "colour": "#13ce66",
     "items": [
       {
         "id": "auth-start",
-        "title": "Branch cut",
-        "annotation": "",
+        "name": "Branch cut",
+        "type": "",
         "at": "2025-01-12",
         "endAt": "2025-01-18"
       },
       {
         "id": "auth-feature-1",
-        "title": "Feature 1",
-        "annotation": "",
+        "name": "Feature 1",
+        "type": "",
         "at": "2025-01-14",
         "endAt": "2025-01-15"
       },
       {
         "id": "auth-feature-2",
-        "title": "Feature 2",
-        "annotation": "",
+        "name": "Feature 2",
+        "type": "",
         "at": "2025-01-15",
         "endAt": "2025-01-18"
       },
       {
         "id": "auth-review",
-        "title": "Design review",
-        "annotation": "",
+        "name": "Design review",
+        "type": "",
         "at": "2025-01-16",
         "endAt": "2025-01-17"
       },
       {
         "id": "auth-merge",
-        "title": "Rebased & merged",
-        "annotation": "",
+        "name": "Rebased & merged",
+        "type": "",
         "at": "2025-02-03",
         "endAt": "2025-02-04"
       }
@@ -123,26 +123,26 @@
   {
     "id": "feature-api-gateway",
     "name": "feature/api-gateway",
-    "color": "#ff7849",
+    "colour": "#ff7849",
     "items": [
       {
         "id": "api-scaffold",
-        "title": "Edge routes ready",
-        "annotation": "",
+        "name": "Edge routes ready",
+        "type": "",
         "at": "2025-01-10",
         "endAt": "2025-01-12"
       },
       {
         "id": "api-perf",
-        "title": "Perf tuning",
-        "annotation": "",
+        "name": "Perf tuning",
+        "type": "",
         "at": "2025-01-30",
         "endAt": "2025-02-02"
       },
       {
         "id": "api-merge",
-        "title": "Merged behind flag",
-        "annotation": "",
+        "name": "Merged behind flag",
+        "type": "",
         "at": "2025-02-07",
         "endAt": "2025-02-09"
       }

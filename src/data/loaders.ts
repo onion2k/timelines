@@ -2,6 +2,42 @@ import tracksData from './branchTracks.json'
 import milestonesData from './milestones.json'
 import { type Milestone, type MultiLineTimelineItem, type MultiLineTimelineTrack } from '../components/MultiLineTimeline'
 
+export type BranchTracksFieldMapping = {
+  track: {
+    id: string
+    name: string
+    color: string
+    items?: string
+    startWeek?: string
+    endWeek?: string
+  }
+  item: {
+    id: string
+    title: string
+    startDate: string
+    endDate: string
+    annotation?: string
+  }
+}
+
+export const defaultBranchTracksFieldMapping: BranchTracksFieldMapping = {
+  track: {
+    id: 'id',
+    name: 'name',
+    color: 'colour',
+    items: 'items',
+    startWeek: 'startWeek',
+    endWeek: 'endWeek',
+  },
+  item: {
+    id: 'id',
+    title: 'name',
+    startDate: 'at',
+    endDate: 'endAt',
+    annotation: 'type',
+  },
+}
+
 function isString(value: unknown): value is string {
   return typeof value === 'string'
 }
@@ -16,36 +52,77 @@ function isValidDateString(value: unknown): value is string {
   return !Number.isNaN(d.getTime())
 }
 
-function validateItem(item: unknown): MultiLineTimelineItem {
+function pickStringField({
+  source,
+  fieldName,
+  label,
+}: {
+  source: Record<string, unknown>
+  fieldName: string
+  label: string
+}) {
+  const value = source[fieldName]
+  if (!isString(value)) throw new Error(`${label} must be a string (expected field: ${fieldName})`)
+  return value
+}
+
+function validateItem(item: unknown, mapping: BranchTracksFieldMapping): MultiLineTimelineItem {
   if (typeof item !== 'object' || item === null) throw new Error('Item must be an object')
   const value = item as Record<string, unknown>
-  if (!isString(value.id) || !isString(value.title) || !isString(value.annotation)) {
-    throw new Error('Item missing required string fields')
+  const id = pickStringField({ source: value, fieldName: mapping.item.id, label: 'Item id' })
+  const title = pickStringField({ source: value, fieldName: mapping.item.title, label: 'Item title' })
+  const annotationField = mapping.item.annotation ?? 'annotation'
+  const annotationValue = value[annotationField]
+  const annotation = isString(annotationValue) ? annotationValue : ''
+  const atValue = value[mapping.item.startDate]
+  if (!isValidDateString(atValue)) throw new Error(`Invalid start date for item ${id} (expected field: ${mapping.item.startDate})`)
+  const endAtField = mapping.item.endDate
+  const endAtValue = value[endAtField]
+  if (endAtValue !== undefined && !isValidDateString(endAtValue)) {
+    throw new Error(`Invalid end date for item ${id} (expected field: ${endAtField})`)
   }
-  if (value.at && !isValidDateString(value.at)) throw new Error(`Invalid at date for item ${value.id}`)
-  if (value.endAt && !isValidDateString(value.endAt)) throw new Error(`Invalid endAt date for item ${value.id}`)
   return {
-    id: value.id,
-    title: value.title,
-    annotation: value.annotation,
-    at: value.at as string | undefined,
-    endAt: value.endAt as string | undefined,
+    id,
+    title,
+    annotation,
+    at: atValue,
+    endAt: endAtValue as string | undefined,
   }
 }
 
-function validateTrack(track: unknown): MultiLineTimelineTrack {
+function validateTrack(track: unknown, mapping: BranchTracksFieldMapping): MultiLineTimelineTrack {
   if (typeof track !== 'object' || track === null) throw new Error('Track must be an object')
   const value = track as Record<string, unknown>
-  if (!isString(value.id) || !isString(value.name) || !isString(value.color)) {
-    throw new Error('Track missing required string fields')
+  const id = pickStringField({ source: value, fieldName: mapping.track.id, label: 'Track id' })
+  const name = pickStringField({ source: value, fieldName: mapping.track.name, label: 'Track name' })
+  const color = pickStringField({ source: value, fieldName: mapping.track.color, label: 'Track color' })
+  const itemsField = mapping.track.items ?? 'items'
+  const itemsSource = value[itemsField]
+  if (!Array.isArray(itemsSource)) throw new Error(`Track ${id} items must be an array (expected field: ${itemsField})`)
+  const itemIdCounts: Record<string, number> = {}
+  const items = itemsSource.map((item) => {
+    const validated = validateItem(item, mapping)
+    const seenCount = itemIdCounts[validated.id] ?? 0
+    itemIdCounts[validated.id] = seenCount + 1
+    const uniqueId = seenCount === 0 ? validated.id : `${validated.id}__${seenCount + 1}`
+    return { ...validated, id: uniqueId }
+  })
+
+  const startWeekField = mapping.track.startWeek
+  const startWeekValue = startWeekField ? value[startWeekField] : undefined
+  const startWeek = startWeekValue === undefined ? undefined : isNumber(startWeekValue) ? startWeekValue : undefined
+  if (startWeekField && startWeekValue !== undefined && startWeek === undefined) {
+    throw new Error(`Track ${id} has invalid startWeek (expected field: ${startWeekField})`)
   }
-  if (!Array.isArray(value.items)) throw new Error(`Track ${value.id} items must be an array`)
-  const items = value.items.map(validateItem)
-  const startWeek = value.startWeek === undefined ? undefined : isNumber(value.startWeek) ? value.startWeek : undefined
-  const endWeek = value.endWeek === undefined ? undefined : isNumber(value.endWeek) ? value.endWeek : undefined
-  if (value.startWeek !== undefined && startWeek === undefined) throw new Error(`Track ${value.id} has invalid startWeek`)
-  if (value.endWeek !== undefined && endWeek === undefined) throw new Error(`Track ${value.id} has invalid endWeek`)
-  return { id: value.id, name: value.name, color: value.color, items, startWeek, endWeek }
+
+  const endWeekField = mapping.track.endWeek
+  const endWeekValue = endWeekField ? value[endWeekField] : undefined
+  const endWeek = endWeekValue === undefined ? undefined : isNumber(endWeekValue) ? endWeekValue : undefined
+  if (endWeekField && endWeekValue !== undefined && endWeek === undefined) {
+    throw new Error(`Track ${id} has invalid endWeek (expected field: ${endWeekField})`)
+  }
+
+  return { id, name, color, items, startWeek, endWeek }
 }
 
 function validateMilestone(milestone: unknown): Milestone {
@@ -56,9 +133,12 @@ function validateMilestone(milestone: unknown): Milestone {
   return { title: value.title, at: value.at }
 }
 
-export function loadBranchTracks(): MultiLineTimelineTrack[] {
-  if (!Array.isArray(tracksData)) throw new Error('Tracks data must be an array')
-  return tracksData.map(validateTrack)
+export function loadBranchTracks(
+  data: unknown = tracksData,
+  mapping: BranchTracksFieldMapping = defaultBranchTracksFieldMapping,
+): MultiLineTimelineTrack[] {
+  if (!Array.isArray(data)) throw new Error('Tracks data must be an array')
+  return data.map((track) => validateTrack(track, mapping))
 }
 
 export function loadMilestones(): Milestone[] {
