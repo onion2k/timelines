@@ -15,9 +15,10 @@ export function MultiLineTimeline({
   weekHeight = 90,
   milestones = [],
 }: MultiLineTimelineProps) {
-  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedMilestoneId, setSelectedMilestoneId] = useState<string | null>(null)
   const [scale, setScale] = useState<ScaleOption>('medium')
+  const [lineWidth, setLineWidth] = useState<number>(6)
+  const [lineSpacing, setLineSpacing] = useState<number>(18)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [viewRange, setViewRange] = useState<{ start: number; end: number } | null>(null)
   const [viewportHeight, setViewportHeight] = useState(() => (typeof window !== 'undefined' ? window.innerHeight : 900))
@@ -153,25 +154,29 @@ export function MultiLineTimeline({
                 <MultiLineTimelineTrack
                   key={track.id}
                   track={track}
-                  trackHeight={trackHeight}
-                  startWeekDate={timelineStartDate}
-                  totalWeeks={totalWeeks}
-                  offsetTop={offsetTop}
-                  guidePadding={guidePadding}
-                  weekHeight={effectiveWeekHeight}
-                  selectedId={selectedId}
-                  onSelect={(id) => setSelectedId(id)}
-                />
-              )
-            })}
-          </div>
+                trackHeight={trackHeight}
+                startWeekDate={timelineStartDate}
+                totalWeeks={totalWeeks}
+                offsetTop={offsetTop}
+                guidePadding={guidePadding}
+                weekHeight={effectiveWeekHeight}
+                lineWidth={lineWidth}
+                lineSpacing={lineSpacing}
+              />
+            )
+          })}
         </div>
+      </div>
       </div>
       <TimelineSettingsDrawer
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         scale={scale}
         onScaleChange={setScale}
+        lineWidth={lineWidth}
+        onLineWidthChange={setLineWidth}
+        lineSpacing={lineSpacing}
+        onLineSpacingChange={setLineSpacing}
       />
     </div>
   )

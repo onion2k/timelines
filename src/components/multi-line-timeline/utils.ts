@@ -1,18 +1,5 @@
-import {
-  CARD_ANCHOR_OFFSET,
-  CARD_HEIGHT_ESTIMATE,
-  STACK_SLOP,
-  WEEK_MS,
-  TRACK_NAME_ORDER,
-} from './constants'
-import {
-  type DurationSpan,
-  type ItemCluster,
-  type MultiLineTimelineItem,
-  type MultiLineTimelineTrack,
-  type PositionedItem,
-  type PositionedItemWithBounds,
-} from './types'
+import { WEEK_MS, TRACK_NAME_ORDER } from './constants'
+import { type DurationSpan, type ItemLine, type MultiLineTimelineItem, type MultiLineTimelineTrack } from './types'
 
 export function clampNumber(value: number, min: number, max: number) {
   if (Number.isNaN(value)) return min
@@ -149,47 +136,87 @@ export function buildDurationSpans({
     .filter(Boolean) as DurationSpan[]
 }
 
-export function buildItemClusters(positionedItems: PositionedItem[]): ItemCluster[] {
-  if (!positionedItems.length) return []
+export function buildItemLines({
+  items,
+  trackHeight,
+  startWeekDate,
+  totalWeeks,
+  weekHeight,
+  offsetTop,
+}: {
+  items: MultiLineTimelineItem[]
+  trackHeight: number
+  startWeekDate: Date | null
+  totalWeeks: number
+  weekHeight: number
+  offsetTop: number
+}): ItemLine[] {
+  if (!items.length) return []
 
-  const withBounds: PositionedItemWithBounds[] = positionedItems.map((p) => {
-    const cardTop = Math.max(0, p.topPx - CARD_ANCHOR_OFFSET)
-    const cardBottom = cardTop + CARD_HEIGHT_ESTIMATE
-    return { ...p, cardTop, cardBottom }
-  })
+  const MIN_LINE_HEIGHT = 10
+  const VERTICAL_GAP = 6
 
-  const sorted = [...withBounds].sort((a, b) => a.cardTop - b.cardTop)
-  const clusters: ItemCluster[] = []
-  let current: PositionedItemWithBounds[] = []
-  let currentEnd = -Infinity
-
-  sorted.forEach((item) => {
-    const overlaps = item.cardTop <= currentEnd + STACK_SLOP
-    if (!overlaps && current.length) {
-      const clusterTop = Math.min(...current.map((i) => i.cardTop))
-      const clusterBottom = Math.max(...current.map((i) => i.cardBottom))
-      clusters.push({
-        id: current.map((i) => i.item.id).join('-'),
-        items: current,
-        containerTop: clusterTop,
-        containerHeight: clusterBottom - clusterTop,
+  const positioned = items
+    .map((item, index) => {
+      const startDate = parseAtDate(item.at)
+      if (!startDate) return null
+      const endDate = parseAtDate(item.endAt)
+      const startPx = computeTopPx({
+        atDate: startDate,
+        startWeekDate,
+        totalWeeks,
+        index,
+        totalItems: items.length,
+        weekHeight,
+        trackHeight,
+        offsetTop,
       })
-      current = []
+      const endPx = endDate
+        ? computeTopPx({
+            atDate: endDate,
+            startWeekDate,
+            totalWeeks,
+            index,
+            totalItems: items.length,
+            weekHeight,
+            trackHeight,
+            offsetTop,
+          })
+        : startPx
+      const spanTopPx = clampNumber(Math.min(startPx, endPx), 0, trackHeight)
+      const spanBottomPx = clampNumber(Math.max(startPx, endPx), 0, trackHeight)
+      const spanHeightPx = Math.max(MIN_LINE_HEIGHT, spanBottomPx - spanTopPx)
+      return { item, topPx: spanTopPx, bottomPx: spanTopPx + spanHeightPx, heightPx: spanHeightPx }
+    })
+    .filter(Boolean) as Array<{
+      item: MultiLineTimelineItem
+      topPx: number
+      bottomPx: number
+      heightPx: number
+    }>
+
+  const sorted = positioned.sort((a, b) => a.topPx - b.topPx)
+  const laneEnds: number[] = []
+
+  const withLanes: ItemLine[] = sorted.map((entry) => {
+    let laneIndex = laneEnds.findIndex((laneEnd) => entry.topPx > laneEnd + VERTICAL_GAP)
+    if (laneIndex === -1) {
+      laneIndex = laneEnds.length
+      laneEnds.push(entry.bottomPx)
+    } else {
+      laneEnds[laneIndex] = entry.bottomPx
     }
-    current.push(item)
-    currentEnd = Math.max(currentEnd, item.cardBottom)
+
+    return {
+      id: entry.item.id,
+      topPx: entry.topPx,
+      heightPx: entry.heightPx,
+      lane: laneIndex,
+      title: entry.item.title,
+      at: entry.item.at,
+      endAt: entry.item.endAt,
+    }
   })
 
-  if (current.length) {
-    const clusterTop = Math.min(...current.map((i) => i.cardTop))
-    const clusterBottom = Math.max(...current.map((i) => i.cardBottom))
-    clusters.push({
-      id: current.map((i) => i.item.id).join('-'),
-      items: current,
-      containerTop: clusterTop,
-      containerHeight: clusterBottom - clusterTop,
-    })
-  }
-
-  return clusters
+  return withLanes
 }

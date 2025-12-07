@@ -38,7 +38,7 @@ export function MilestoneLines({
       const dayKey = atDate.toISOString().slice(0, 10)
       return { ...m, top, dayKey }
     })
-    .filter(Boolean)
+    .filter((line): line is Line => Boolean(line))
 
   if (!lines.length) return null
 

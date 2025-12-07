@@ -5,6 +5,10 @@ type TimelineSettingsDrawerProps = {
   onClose: () => void
   scale: ScaleOption
   onScaleChange: (scale: ScaleOption) => void
+  lineWidth: number
+  onLineWidthChange: (width: number) => void
+  lineSpacing: number
+  onLineSpacingChange: (spacing: number) => void
 }
 
 export function TimelineSettingsDrawer({
@@ -12,6 +16,10 @@ export function TimelineSettingsDrawer({
   onClose,
   scale,
   onScaleChange,
+  lineWidth,
+  onLineWidthChange,
+  lineSpacing,
+  onLineSpacingChange,
 }: TimelineSettingsDrawerProps) {
   if (!open) return null
 
@@ -58,6 +66,34 @@ export function TimelineSettingsDrawer({
                   <span>{option.label}</span>
                 </label>
               ))}
+            </div>
+          </div>
+          <div className="mb-6">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-dark/80">Line width</p>
+            <div className="mt-3 flex items-center gap-3">
+              <input
+                type="range"
+                min={2}
+                max={16}
+                value={lineWidth}
+                onChange={(e) => onLineWidthChange(Number(e.target.value))}
+                className="flex-1 accent-gray-dark"
+              />
+              <span className="w-10 text-right text-sm font-semibold text-gray-dark">{lineWidth}px</span>
+            </div>
+          </div>
+          <div className="mb-6">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-dark/80">Line spacing</p>
+            <div className="mt-3 flex items-center gap-3">
+              <input
+                type="range"
+                min={10}
+                max={36}
+                value={lineSpacing}
+                onChange={(e) => onLineSpacingChange(Number(e.target.value))}
+                className="flex-1 accent-gray-dark"
+              />
+              <span className="w-10 text-right text-sm font-semibold text-gray-dark">{lineSpacing}px</span>
             </div>
           </div>
         </div>

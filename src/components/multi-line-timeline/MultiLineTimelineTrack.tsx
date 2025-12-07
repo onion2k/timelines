@@ -1,12 +1,8 @@
-import { buildDurationSpans, buildItemClusters, computeTopPx, parseAtDate } from './utils'
-import {
-  type ItemCluster,
-  type MultiLineTimelineTrack,
-  type PositionedItem,
-} from './types'
+import { buildDurationSpans, buildItemLines } from './utils'
+import { type MultiLineTimelineTrack } from './types'
 import { TrackDurationSpans } from './TrackDurationSpans'
 import { TrackHeader } from './TrackHeader'
-import { TrackItemCluster } from './TrackItemCluster'
+import { TrackItemLine } from './TrackItemLine'
 
 type MultiLineTimelineTrackProps = {
   track: MultiLineTimelineTrack
@@ -16,8 +12,8 @@ type MultiLineTimelineTrackProps = {
   offsetTop: number
   guidePadding: number
   weekHeight: number
-  selectedId: string | null
-  onSelect: (id: string) => void
+  lineWidth: number
+  lineSpacing: number
 }
 
 export function MultiLineTimelineTrack({
@@ -28,24 +24,17 @@ export function MultiLineTimelineTrack({
   offsetTop,
   guidePadding,
   weekHeight,
-  selectedId,
-  onSelect,
+  lineWidth,
+  lineSpacing,
 }: MultiLineTimelineTrackProps) {
-  const positionedItems: PositionedItem[] = track.items.map((item, index) => {
-    const atDate = parseAtDate(item.at)
-    const topPx = computeTopPx({
-      atDate,
-      startWeekDate,
-      totalWeeks,
-      index,
-      totalItems: track.items.length,
-      weekHeight,
-      trackHeight,
-      offsetTop,
-    })
-    return { item, topPx }
+  const lines = buildItemLines({
+    items: track.items,
+    trackHeight,
+    startWeekDate,
+    totalWeeks,
+    weekHeight,
+    offsetTop,
   })
-  const clusters: ItemCluster[] = buildItemClusters(positionedItems)
   const durationSpans = buildDurationSpans({
     track,
     trackHeight,
@@ -66,13 +55,13 @@ export function MultiLineTimelineTrack({
             style={{ backgroundColor: track.color, boxShadow: `0 0 0 6px ${track.color}1a` }}
             aria-hidden
           />
-          {clusters.map((cluster) => (
-            <TrackItemCluster
-              key={`cluster-${cluster.id}`}
-              cluster={cluster}
+          {lines.map((line) => (
+            <TrackItemLine
+              key={line.id}
+              line={line}
               color={track.color}
-              selectedId={selectedId}
-              onSelect={onSelect}
+              laneWidth={lineSpacing}
+              lineWidth={lineWidth}
             />
           ))}
         </div>

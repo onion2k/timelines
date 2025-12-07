@@ -29,13 +29,14 @@ export type MultiLineTimelineProps = {
 export type Milestone = { project: string; title: string; at: string }
 export type ScaleOption = 'small' | 'medium' | 'large'
 
-export type PositionedItem = { item: MultiLineTimelineItem; topPx: number }
-export type PositionedItemWithBounds = PositionedItem & { cardTop: number; cardBottom: number }
-export type ItemCluster = {
+export type ItemLine = {
   id: string
-  items: PositionedItemWithBounds[]
-  containerTop: number
-  containerHeight: number
+  topPx: number
+  heightPx: number
+  lane: number
+  title: string
+  at?: string
+  endAt?: string
 }
 
 export type DurationSpan = { id: string; topPx: number; heightPx: number }
