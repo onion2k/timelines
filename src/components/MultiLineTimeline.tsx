@@ -6,5 +6,4 @@ export {
   type MultiLineTimelineProps,
   type MultiLineTimelineTrack,
   type ScaleOption,
-  type WeekLabelMode,
 } from './multi-line-timeline/types'

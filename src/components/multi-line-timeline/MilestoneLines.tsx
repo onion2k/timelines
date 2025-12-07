@@ -1,5 +1,5 @@
 import { WEEK_MS } from './constants'
-import { parseAtDate } from './utils'
+import { clampNumber, getTopForWeekOffset, parseAtDate } from './utils'
 import { type Milestone } from './types'
 
 type MilestoneLinesProps = {
@@ -25,15 +25,18 @@ export function MilestoneLines({
 }: MilestoneLinesProps) {
   if (!milestones.length || !startWeekDate || totalWeeks < 1) return null
 
-  type Line = { title: string; at: string; top: number }
+  type Line = { project: string; title: string; at: string; top: number; dayKey: string }
 
   const lines: Line[] = milestones
     .map((m) => {
       const atDate = parseAtDate(m.at)
       if (!atDate) return null
       const diffWeeksFromStart = (atDate.getTime() - startWeekDate.getTime()) / WEEK_MS
-      const top = diffWeeksFromStart * weekHeight
-      return { ...m, top }
+      if (diffWeeksFromStart < 0 || diffWeeksFromStart > totalWeeks - 1) return null
+      const clampedOffset = clampNumber(diffWeeksFromStart, 0, Math.max(0, totalWeeks - 1))
+      const top = getTopForWeekOffset({ weekOffset: clampedOffset, totalWeeks, weekHeight })
+      const dayKey = atDate.toISOString().slice(0, 10)
+      return { ...m, top, dayKey }
     })
     .filter(Boolean)
 
@@ -41,10 +44,10 @@ export function MilestoneLines({
 
   const groupedLines = Object.values(
     lines.reduce<Record<string, { top: number; items: Line[] }>>((acc, line) => {
-      if (!acc[line.at]) {
-        acc[line.at] = { top: line.top, items: [] }
+      if (!acc[line.dayKey]) {
+        acc[line.dayKey] = { top: line.top, items: [] }
       }
-      acc[line.at].items.push(line)
+      acc[line.dayKey].items.push(line)
       return acc
     }, {}),
   ).sort((a, b) => a.top - b.top)
@@ -55,8 +58,37 @@ export function MilestoneLines({
         {groupedLines.map((group) => {
           const groupSelected = group.items.some((line) => selectedId === `${line.title}-${line.at}`)
           return (
-            <div key={`milestone-group-${group.items[0].at}`} className="absolute left-0 right-0" style={{ top: group.top }}>
+            <div key={`milestone-group-${group.items[0].dayKey}`} className="absolute left-0 right-0" style={{ top: group.top }}>
               <div className="flex items-center gap-3">
+                <div className="flex flex-nowrap items-center gap-2 pl-1 pr-3" style={{ pointerEvents: 'auto' }}>
+                  {group.items.slice(0, 3).map((line) => {
+                    const milestoneId = `${line.title}-${line.at}`
+                    const isSelected = selectedId === milestoneId
+                    return (
+                      <button
+                        key={`milestone-${line.title}-${line.at}`}
+                        type="button"
+                        onClick={() => onSelect(isSelected ? null : milestoneId)}
+                        className="relative flex items-center gap-2 text-xs font-semibold text-gray-dark focus:outline-none"
+                      >
+                        <span
+                          className="h-2.5 w-2.5 rounded-full border"
+                          style={{
+                            backgroundColor: isSelected ? '#1fb6ff' : '#f7fafc',
+                            borderColor: isSelected ? '#1fb6ff' : '#cfd6e1',
+                            boxShadow: isSelected ? '0 0 0 4px rgba(31,182,255,0.15)' : 'none',
+                          }}
+                        />
+                        <span>{line.project} {line.title}</span>
+                      </button>
+                    )
+                  })}
+                  {group.items.length > 3 ? (
+                    <span className="text-[0.7rem] font-semibold text-gray-dark/80" aria-label={`${group.items.length} markers`}>
+                      {`${group.items.length} markers`}
+                    </span>
+                  ) : null}
+                </div>
                 <div
                   className="h-px flex-1"
                   style={{
@@ -67,31 +99,6 @@ export function MilestoneLines({
                     height: groupSelected ? 2 : 1,
                   }}
                 />
-                <div className="flex flex-wrap items-center gap-2 pl-1 pr-3">
-                  {group.items.map((line) => {
-                    const milestoneId = `${line.title}-${line.at}`
-                    const isSelected = selectedId === milestoneId
-                    return (
-                      <button
-                        key={`milestone-${line.title}-${line.at}`}
-                        type="button"
-                        onClick={() => onSelect(isSelected ? null : milestoneId)}
-                        className="relative flex items-center gap-2 text-xs font-semibold text-gray-dark focus:outline-none"
-                        style={{ pointerEvents: 'auto' }}
-                      >
-                        <span
-                          className="h-2.5 w-2.5 rounded-full border"
-                          style={{
-                            backgroundColor: isSelected ? '#1fb6ff' : '#f7fafc',
-                            borderColor: isSelected ? '#1fb6ff' : '#cfd6e1',
-                            boxShadow: isSelected ? '0 0 0 4px rgba(31,182,255,0.15)' : 'none',
-                          }}
-                        />
-                        <span>{line.title}</span>
-                      </button>
-                    )
-                  })}
-                </div>
               </div>
             </div>
           )

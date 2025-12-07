@@ -1,7 +1,6 @@
 import { useRef, useState, type MouseEvent } from 'react'
 import { WEEK_MS } from './constants'
-import { clampNumber } from './utils'
-import { type WeekLabelMode } from './types'
+import { clampNumber, getTopForWeekNumber } from './utils'
 
 type WeekRailProps = {
   totalWeeks: number
@@ -10,7 +9,6 @@ type WeekRailProps = {
   weekHeight: number
   padding: number
   startWeekDate: Date | null
-  labelMode: WeekLabelMode
   viewRange: { start: number; end: number } | null
   onRangeSelect: (range: { start: number; end: number } | null) => void
 }
@@ -22,7 +20,6 @@ export function WeekRail({
   weekHeight,
   padding,
   startWeekDate,
-  labelMode,
   viewRange,
   onRangeSelect,
 }: WeekRailProps) {
@@ -31,11 +28,9 @@ export function WeekRail({
   const markers = Array.from({ length: totalWeeks }, (_, i) => i + 1)
   const labelBaseDate = startWeekDate ? new Date(Date.UTC(startWeekDate.getUTCFullYear(), 0, 1)) : null
   const formatLabel = (week: number) => {
-    if (labelMode === 'dates' && labelBaseDate) {
-      const weekStartDate = new Date(labelBaseDate.getTime() + (week - 1) * WEEK_MS)
-      return weekStartDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
-    }
-    return `Week ${week}`
+    if (!labelBaseDate) return `Week ${week}`
+    const weekStartDate = new Date(labelBaseDate.getTime() + (week - 1) * WEEK_MS)
+    return weekStartDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
   }
 
   const toWeekFromEvent = (clientY: number) => {
@@ -43,8 +38,8 @@ export function WeekRail({
     if (!container) return null
     const rect = container.getBoundingClientRect()
     const offsetY = clientY - rect.top - padding
-    const raw = offsetY / weekHeight + 1
-    const week = Math.floor(raw)
+    const rawWeek = totalWeeks - offsetY / weekHeight
+    const week = Math.floor(rawWeek)
     return clampNumber(week, 1, totalWeeks)
   }
 
@@ -77,8 +72,13 @@ export function WeekRail({
   }
 
   const selection = dragRange ?? viewRange
-  const selectionTop = selection ? (selection.start - 1) * weekHeight + 2 : 0
-  const selectionHeight = selection ? Math.max(weekHeight, (selection.end - selection.start + 1) * weekHeight - 4) : 0
+  const selectionTop = selection
+    ? getTopForWeekNumber({ weekNumber: selection.end, totalWeeks, weekHeight }) + 2
+    : 0
+  const selectionBottom = selection
+    ? getTopForWeekNumber({ weekNumber: selection.start, totalWeeks, weekHeight }) + weekHeight - 2
+    : 0
+  const selectionHeight = selection ? Math.max(weekHeight, selectionBottom - selectionTop) : 0
 
   return (
     <div className="min-w-[200px] pl-4 select-none">
@@ -109,7 +109,7 @@ export function WeekRail({
             />
           ) : null}
           {markers.map((week) => {
-            const topPx = (week - 1) * weekHeight
+            const topPx = getTopForWeekNumber({ weekNumber: week, totalWeeks, weekHeight })
             const isSprintBoundary = sprintLength > 0 && (week - 1) % sprintLength === 0
             return (
               <div key={week} className="absolute left-0 right-0" style={{ top: topPx }}>

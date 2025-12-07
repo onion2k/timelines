@@ -5,8 +5,8 @@ import { SprintGuides } from './SprintGuides'
 import { TimelineSettingsDrawer } from './TimelineSettingsDrawer'
 import { MultiLineTimelineTrack } from './MultiLineTimelineTrack'
 import { WeekRail } from './WeekRail'
-import { getEndOfWeek, normalizeDateToUTC, parseAtDate } from './utils'
-import { type MultiLineTimelineProps, type ScaleOption, type WeekLabelMode } from './types'
+import { getEndOfWeek, getTopForWeekNumber, getTrackOrderIndex, normalizeDateToUTC, parseAtDate } from './utils'
+import { type MultiLineTimelineProps, type ScaleOption } from './types'
 
 export function MultiLineTimeline({
   tracks,
@@ -17,7 +17,6 @@ export function MultiLineTimeline({
 }: MultiLineTimelineProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedMilestoneId, setSelectedMilestoneId] = useState<string | null>(null)
-  const [weekLabelMode, setWeekLabelMode] = useState<WeekLabelMode>('weeks')
   const [scale, setScale] = useState<ScaleOption>('medium')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [viewRange, setViewRange] = useState<{ start: number; end: number } | null>(null)
@@ -54,9 +53,6 @@ export function MultiLineTimeline({
   const headerOffset = 36 // approx height of track/week label + margin
   const guideTopOffset = headerOffset + guidePadding
   const contentBlurClass = settingsOpen ? 'blur-[2px]' : ''
-  const viewStartDate = timelineStartDate
-    ? new Date(timelineStartDate.getTime() + (viewStartWeek - 1) * WEEK_MS)
-    : null
 
   useEffect(() => {
     if (!viewRange || typeof window === 'undefined') return
@@ -64,9 +60,21 @@ export function MultiLineTimeline({
     if (!body) return
     const rect = body.getBoundingClientRect()
     const pageTop = rect.top + window.scrollY
-    const target = pageTop + guideTopOffset + (viewStartWeek - 1) * effectiveWeekHeight
+    const targetWeek = viewRange ? viewEndWeek : totalWeeks
+    const target = pageTop + guideTopOffset + getTopForWeekNumber({
+      weekNumber: targetWeek,
+      totalWeeks,
+      weekHeight: effectiveWeekHeight,
+    })
     window.scrollTo({ top: Math.max(0, target - 24), behavior: 'smooth' })
-  }, [viewRange, viewStartWeek, effectiveWeekHeight, guideTopOffset])
+  }, [viewRange, viewEndWeek, effectiveWeekHeight, guideTopOffset, totalWeeks])
+
+  const orderedTracks = [...tracks].sort((a, b) => {
+    const orderA = getTrackOrderIndex(a.name)
+    const orderB = getTrackOrderIndex(b.name)
+    if (orderA !== orderB) return orderA - orderB
+    return a.name.localeCompare(b.name)
+  })
 
   return (
     <div className="relative pt-2">
@@ -120,12 +128,11 @@ export function MultiLineTimeline({
             weekHeight={effectiveWeekHeight}
             padding={guidePadding}
             startWeekDate={timelineStartDate}
-            labelMode={weekLabelMode}
             viewRange={viewRange}
             onRangeSelect={(range) => setViewRange(range)}
           />
           <div className="flex gap-10">
-            {tracks.map((track) => {
+            {orderedTracks.map((track) => {
               const clampedStartWeekGlobal = timelineStartDate
                 ? Math.max(1, Math.min(totalWeeks, Math.floor(track.startWeek ?? 1)))
                 : 1
@@ -136,7 +143,11 @@ export function MultiLineTimeline({
               const clampedEndWeek = clampedEndWeekGlobal
               const trackWeeks = Math.max(1, clampedEndWeek - clampedStartWeek + 1)
               const trackHeight = trackWeeks * effectiveWeekHeight
-              const offsetTop = (clampedStartWeek - 1) * effectiveWeekHeight
+              const offsetTop = getTopForWeekNumber({
+                weekNumber: clampedEndWeek,
+                totalWeeks,
+                weekHeight: effectiveWeekHeight,
+              })
 
               return (
                 <MultiLineTimelineTrack
@@ -159,9 +170,6 @@ export function MultiLineTimeline({
       <TimelineSettingsDrawer
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
-        labelMode={weekLabelMode}
-        onLabelModeChange={setWeekLabelMode}
-        startWeekDate={timelineStartDate}
         scale={scale}
         onScaleChange={setScale}
       />

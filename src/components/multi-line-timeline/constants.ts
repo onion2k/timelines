@@ -6,3 +6,4 @@ export const STACK_SLOP = 4
 export const STACK_LEFT_BASE = 16
 export const BASE_Z_INDEX = 100
 export const SELECTED_Z_INDEX = 1000
+export const TRACK_NAME_ORDER = ['Platform', 'UK', 'IT', 'ES', 'SE', 'DK']

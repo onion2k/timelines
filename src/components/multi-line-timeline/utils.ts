@@ -3,6 +3,7 @@ import {
   CARD_HEIGHT_ESTIMATE,
   STACK_SLOP,
   WEEK_MS,
+  TRACK_NAME_ORDER,
 } from './constants'
 import {
   type DurationSpan,
@@ -16,6 +17,35 @@ import {
 export function clampNumber(value: number, min: number, max: number) {
   if (Number.isNaN(value)) return min
   return Math.min(max, Math.max(min, value))
+}
+
+export function getTrackOrderIndex(name: string) {
+  const index = TRACK_NAME_ORDER.indexOf(name)
+  return index === -1 ? Number.MAX_SAFE_INTEGER : index
+}
+
+export function getTopForWeekNumber({
+  weekNumber,
+  totalWeeks,
+  weekHeight,
+}: {
+  weekNumber: number
+  totalWeeks: number
+  weekHeight: number
+}) {
+  return (totalWeeks - weekNumber) * weekHeight
+}
+
+export function getTopForWeekOffset({
+  weekOffset,
+  totalWeeks,
+  weekHeight,
+}: {
+  weekOffset: number
+  totalWeeks: number
+  weekHeight: number
+}) {
+  return (totalWeeks - weekOffset - 1) * weekHeight
 }
 
 export function normalizeDateToUTC(date: Date) {
@@ -64,7 +94,7 @@ export function computeTopPx({
   if (atDate && startWeekDate && totalWeeks > 0) {
     const diffWeeks = (atDate.getTime() - startWeekDate.getTime()) / WEEK_MS
     const clampedWeeks = clampNumber(diffWeeks, 0, Math.max(0, totalWeeks - 1))
-    const position = clampedWeeks * weekHeight - offsetTop
+    const position = getTopForWeekOffset({ weekOffset: clampedWeeks, totalWeeks, weekHeight }) - offsetTop
     return clampNumber(position, 0, trackHeight)
   }
   if (totalItems <= 1) return trackHeight / 2

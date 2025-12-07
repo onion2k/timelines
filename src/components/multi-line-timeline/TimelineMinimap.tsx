@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { clampNumber, getTopForWeekOffset, getTrackOrderIndex } from './utils'
 import { type MultiLineTimelineTrack } from './types'
 
 type TimelineMinimapProps = {
@@ -9,6 +10,15 @@ type TimelineMinimapProps = {
 export function TimelineMinimap({ tracks, weeks }: TimelineMinimapProps) {
   const [minimapHeight, setMinimapHeight] = useState(() => Math.round((typeof window !== 'undefined' ? window.innerHeight : 720) / 6))
   const [viewportBox, setViewportBox] = useState({ top: 0, height: 0 })
+
+  const orderedTracks = useMemo(() => {
+    return [...tracks].sort((a, b) => {
+      const orderA = getTrackOrderIndex(a.name)
+      const orderB = getTrackOrderIndex(b.name)
+      if (orderA !== orderB) return orderA - orderB
+      return a.name.localeCompare(b.name)
+    })
+  }, [tracks])
 
   const timelineMeta = useMemo(() => {
     const DAY_MS = 1000 * 60 * 60 * 24
@@ -28,7 +38,7 @@ export function TimelineMinimap({ tracks, weeks }: TimelineMinimapProps) {
       return Number.isNaN(parsed.getTime()) ? null : normalizeDateToUTC(parsed)
     }
 
-    const allDates = tracks.flatMap((track) => track.items.map((item) => parseAtDate(item.at))).filter(Boolean) as Date[]
+    const allDates = orderedTracks.flatMap((track) => track.items.map((item) => parseAtDate(item.at))).filter(Boolean) as Date[]
     if (!allDates.length) return null
     const rawStartDate = new Date(Math.min(...allDates.map((d) => d.getTime())))
     const rawEndDate = new Date(Math.max(...allDates.map((d) => d.getTime())))
@@ -37,7 +47,7 @@ export function TimelineMinimap({ tracks, weeks }: TimelineMinimapProps) {
     const dataWeeks = Math.max(1, Math.floor((endWeekDate.getTime() - originDate.getTime()) / WEEK_MS) + 1)
     const totalWeeks = Math.max(weeks ?? dataWeeks, dataWeeks)
     return { startWeekDate: originDate, totalWeeks }
-  }, [tracks, weeks])
+  }, [orderedTracks, weeks])
 
   useEffect(() => {
     const measure = () => {
@@ -91,14 +101,10 @@ export function TimelineMinimap({ tracks, weeks }: TimelineMinimapProps) {
       if (Number.isNaN(parsed.getTime())) return null
       return new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate()))
     }
-    const clampNumber = (value: number, min: number, max: number) => {
-      if (Number.isNaN(value)) return min
-      return Math.min(max, Math.max(min, value))
-    }
     const width = 220
-    const columnWidth = width / Math.max(1, tracks.length)
+    const columnWidth = width / Math.max(1, orderedTracks.length)
     const scaleY = totalWeeks ? minimapHeight / totalWeeks : 0
-    return tracks.flatMap((track, trackIdx) =>
+    return orderedTracks.flatMap((track, trackIdx) =>
       track.items
         .map((item) => {
           const atDate = parseAtDate(item.at)
@@ -107,14 +113,14 @@ export function TimelineMinimap({ tracks, weeks }: TimelineMinimapProps) {
           const clamped = clampNumber(diffWeeks, 0, Math.max(totalWeeks, 1))
           return {
             id: item.id,
-            top: clamped * scaleY,
+            top: getTopForWeekOffset({ weekOffset: clamped, totalWeeks, weekHeight: scaleY }),
             left: trackIdx * columnWidth + columnWidth / 2,
             color: track.color,
           }
         })
         .filter(Boolean),
     ) as { id: string; top: number; left: number; color: string }[]
-  }, [minimapHeight, timelineMeta, tracks])
+  }, [minimapHeight, orderedTracks, timelineMeta])
 
   if (!timelineMeta) return null
 

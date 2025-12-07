@@ -1,11 +1,8 @@
-import { type ScaleOption, type WeekLabelMode } from './types'
+import { type ScaleOption } from './types'
 
 type TimelineSettingsDrawerProps = {
   open: boolean
   onClose: () => void
-  labelMode: WeekLabelMode
-  onLabelModeChange: (mode: WeekLabelMode) => void
-  startWeekDate: Date | null
   scale: ScaleOption
   onScaleChange: (scale: ScaleOption) => void
 }
@@ -13,15 +10,10 @@ type TimelineSettingsDrawerProps = {
 export function TimelineSettingsDrawer({
   open,
   onClose,
-  labelMode,
-  onLabelModeChange,
-  startWeekDate,
   scale,
   onScaleChange,
 }: TimelineSettingsDrawerProps) {
   if (!open) return null
-
-  const canShowDates = Boolean(startWeekDate)
 
   return (
     <div className="fixed inset-0 z-50">
@@ -46,31 +38,6 @@ export function TimelineSettingsDrawer({
           </button>
         </div>
         <div className="flex-1 overflow-auto px-5 py-4">
-          <div className="mb-6">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-dark/80">Timeline scale</p>
-            <div className="mt-3 inline-flex rounded-full bg-gray-light/60 p-1 text-[0.75rem] font-semibold text-gray-dark shadow-sm">
-              <button
-                type="button"
-                className={`rounded-full px-3 py-1 transition ${labelMode === 'weeks' ? 'bg-white shadow-sm' : 'hover:bg-white/60'}`}
-                aria-pressed={labelMode === 'weeks'}
-                onClick={() => onLabelModeChange('weeks')}
-              >
-                Weeks
-              </button>
-              <button
-                type="button"
-                className={`rounded-full px-3 py-1 transition ${labelMode === 'dates' ? 'bg-white shadow-sm' : 'hover:bg-white/60'} ${!canShowDates ? 'cursor-not-allowed opacity-50' : ''}`}
-                aria-pressed={labelMode === 'dates'}
-                onClick={() => canShowDates && onLabelModeChange('dates')}
-                disabled={!canShowDates}
-              >
-                Dates
-              </button>
-            </div>
-            {!canShowDates ? (
-              <p className="mt-2 text-xs text-gray">Dates become available once a valid start date is detected.</p>
-            ) : null}
-          </div>
           <div className="mb-6">
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-dark/80">Scale</p>
             <div className="mt-3 flex flex-col gap-2 text-sm font-semibold text-gray-dark">

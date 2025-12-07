@@ -128,9 +128,10 @@ function validateTrack(track: unknown, mapping: BranchTracksFieldMapping): Multi
 function validateMilestone(milestone: unknown): Milestone {
   if (typeof milestone !== 'object' || milestone === null) throw new Error('Milestone must be an object')
   const value = milestone as Record<string, unknown>
+  if (!isString(value.project_name)) throw new Error('Milestone missing project_name')
   if (!isString(value.title)) throw new Error('Milestone missing title')
   if (!isValidDateString(value.at)) throw new Error(`Milestone ${value.title} has invalid date`)
-  return { title: value.title, at: value.at }
+  return { project: value.project_name, title: value.title, at: value.at }
 }
 
 export function loadBranchTracks(

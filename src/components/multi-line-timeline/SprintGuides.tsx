@@ -1,3 +1,5 @@
+import { getTopForWeekNumber } from './utils'
+
 type SprintGuidesProps = {
   totalWeeks: number
   weekHeight: number
@@ -15,7 +17,12 @@ export function SprintGuides({ totalWeeks, weekHeight, sprintLength, padding, to
         {Array.from({ length: sprints }, (_, idx) => {
           const sprintStartWeek = idx * sprintLength
           const sprintWeeks = Math.min(sprintLength, totalWeeks - sprintStartWeek)
-          const top = sprintStartWeek * weekHeight
+          const sprintEndWeekNumber = sprintStartWeek + sprintWeeks
+          const top = getTopForWeekNumber({
+            weekNumber: sprintEndWeekNumber,
+            totalWeeks,
+            weekHeight,
+          })
           const height = sprintWeeks * weekHeight
           const isEven = idx % 2 === 0
           return (

@@ -26,8 +26,7 @@ export type MultiLineTimelineProps = {
   milestones?: Milestone[]
 }
 
-export type Milestone = { title: string; at: string }
-export type WeekLabelMode = 'weeks' | 'dates'
+export type Milestone = { project: string; title: string; at: string }
 export type ScaleOption = 'small' | 'medium' | 'large'
 
 export type PositionedItem = { item: MultiLineTimelineItem; topPx: number }
