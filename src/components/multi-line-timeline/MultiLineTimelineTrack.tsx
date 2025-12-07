@@ -3,6 +3,7 @@ import { type MultiLineTimelineTrack } from './types'
 import { TrackDurationSpans } from './TrackDurationSpans'
 import { TrackHeader } from './TrackHeader'
 import { TrackItemLine } from './TrackItemLine'
+import { TrackItemLineCard } from './TrackItemLineCard'
 
 type MultiLineTimelineTrackProps = {
   track: MultiLineTimelineTrack
@@ -14,6 +15,8 @@ type MultiLineTimelineTrackProps = {
   weekHeight: number
   lineWidth: number
   lineSpacing: number
+  selectedLine: { trackId: string; lineId: string } | null
+  onSelectLine: (lineId: string) => void
 }
 
 export function MultiLineTimelineTrack({
@@ -26,6 +29,8 @@ export function MultiLineTimelineTrack({
   weekHeight,
   lineWidth,
   lineSpacing,
+  selectedLine,
+  onSelectLine,
 }: MultiLineTimelineTrackProps) {
   const lines = buildItemLines({
     items: track.items,
@@ -62,8 +67,29 @@ export function MultiLineTimelineTrack({
               color={track.color}
               laneWidth={lineSpacing}
               lineWidth={lineWidth}
+              selected={selectedLine?.trackId === track.id && selectedLine?.lineId === line.id}
+              onClick={() => onSelectLine(line.id)}
             />
           ))}
+          {selectedLine?.trackId === track.id
+            ? (() => {
+                const activeLine = lines.find((l) => l.id === selectedLine.lineId)
+                if (!activeLine) return null
+                const baseLeft = 14
+                const laneX = baseLeft + activeLine.lane * lineSpacing
+                const cardLeft = laneX + lineSpacing + 14
+                const cardTop = Math.max(4, activeLine.topPx - 20)
+                return (
+                  <TrackItemLineCard
+                    line={activeLine}
+                    track={track}
+                    top={cardTop}
+                    left={cardLeft}
+                    onClose={() => onSelectLine(activeLine.id)}
+                  />
+                )
+              })()
+            : null}
         </div>
       </div>
     </div>

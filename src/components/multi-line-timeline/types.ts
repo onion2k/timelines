@@ -37,6 +37,7 @@ export type ItemLine = {
   title: string
   at?: string
   endAt?: string
+  annotation?: string
 }
 
 export type DurationSpan = { id: string; topPx: number; heightPx: number }

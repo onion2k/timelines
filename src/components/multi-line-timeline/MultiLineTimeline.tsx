@@ -17,8 +17,9 @@ export function MultiLineTimeline({
 }: MultiLineTimelineProps) {
   const [selectedMilestoneId, setSelectedMilestoneId] = useState<string | null>(null)
   const [scale, setScale] = useState<ScaleOption>('medium')
-  const [lineWidth, setLineWidth] = useState<number>(6)
-  const [lineSpacing, setLineSpacing] = useState<number>(18)
+  const [lineWidth, setLineWidth] = useState<number>(4)
+  const [lineSpacing, setLineSpacing] = useState<number>(12)
+  const [selectedLine, setSelectedLine] = useState<{ trackId: string; lineId: string } | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [viewRange, setViewRange] = useState<{ start: number; end: number } | null>(null)
   const [viewportHeight, setViewportHeight] = useState(() => (typeof window !== 'undefined' ? window.innerHeight : 900))
@@ -162,6 +163,13 @@ export function MultiLineTimeline({
                 weekHeight={effectiveWeekHeight}
                 lineWidth={lineWidth}
                 lineSpacing={lineSpacing}
+                selectedLine={selectedLine}
+                onSelectLine={(lineId) =>
+                  setSelectedLine((current) => {
+                    const isSame = current?.lineId === lineId && current.trackId === track.id
+                    return isSame ? null : { trackId: track.id, lineId }
+                  })
+                }
               />
             )
           })}

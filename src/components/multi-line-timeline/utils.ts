@@ -215,6 +215,7 @@ export function buildItemLines({
       title: entry.item.title,
       at: entry.item.at,
       endAt: entry.item.endAt,
+      annotation: entry.item.annotation,
     }
   })
 
