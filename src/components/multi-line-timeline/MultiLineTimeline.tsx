@@ -5,7 +5,7 @@ import { SprintGuides } from './SprintGuides'
 import { TimelineSettingsDrawer } from './TimelineSettingsDrawer'
 import { MultiLineTimelineTrack } from './MultiLineTimelineTrack'
 import { WeekRail } from './WeekRail'
-import { getEndOfWeek, getTopForWeekNumber, getTrackOrderIndex, normalizeDateToUTC, parseAtDate } from './utils'
+import { getEndOfWeek, getTopForWeekNumber, getTrackOrderIndex, getStartOfWeek, parseAtDate, normalizeDateToUTC } from './utils'
 import { type MultiLineTimelineProps, type ScaleOption } from './types'
 
 export function MultiLineTimeline({
@@ -19,7 +19,11 @@ export function MultiLineTimeline({
   const [scale, setScale] = useState<ScaleOption>('medium')
   const [lineWidth, setLineWidth] = useState<number>(4)
   const [lineSpacing, setLineSpacing] = useState<number>(12)
-  const [selectedLine, setSelectedLine] = useState<{ trackId: string; lineId: string } | null>(null)
+  const [selectedLine, setSelectedLine] = useState<{
+    trackId: string
+    lineId: string
+    anchor?: { x: number; y: number; clientX: number; clientY: number }
+  } | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [viewRange, setViewRange] = useState<{ start: number; end: number } | null>(null)
   const [viewportHeight, setViewportHeight] = useState(() => (typeof window !== 'undefined' ? window.innerHeight : 900))
@@ -30,10 +34,14 @@ export function MultiLineTimeline({
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
-  const allDates = tracks.flatMap((track) => track.items.map((item) => parseAtDate(item.at))).filter(Boolean) as Date[]
+  const allDates = tracks
+    .flatMap((track) =>
+      track.items.flatMap((item) => [parseAtDate(item.at), parseAtDate(item.endAt)].filter(Boolean)),
+    )
+    .filter(Boolean) as Date[]
   const rawStartDate = allDates.length ? new Date(Math.min(...allDates.map((d) => d.getTime()))) : null
   const rawEndDate = allDates.length ? new Date(Math.max(...allDates.map((d) => d.getTime()))) : null
-  const originDate = rawStartDate ? normalizeDateToUTC(new Date(Date.UTC(rawStartDate.getUTCFullYear(), 0, 1))) : null
+  const originDate = rawStartDate ? getStartOfWeek(rawStartDate) : null
   const endWeekDate = rawEndDate ? getEndOfWeek(rawEndDate) : null
   const timelineStartDate = originDate
   const dataWeeks =
@@ -77,6 +85,26 @@ export function MultiLineTimeline({
     if (orderA !== orderB) return orderA - orderB
     return a.name.localeCompare(b.name)
   })
+
+  const itemRanges = tracks
+    .flatMap((track) =>
+      track.items
+        .map((item) => {
+          const startDate = parseAtDate(item.at)
+          if (!startDate) return null
+          const endDate = parseAtDate(item.endAt) ?? startDate
+          const start = normalizeDateToUTC(startDate).getTime()
+          const end = normalizeDateToUTC(endDate).getTime()
+          return { start: Math.min(start, end), end: Math.max(start, end) }
+        })
+        .filter(Boolean),
+    )
+    .filter(Boolean) as Array<{ start: number; end: number }>
+
+  const getDayActiveCount = (date: Date) => {
+    const target = normalizeDateToUTC(date).getTime()
+    return itemRanges.reduce((acc, range) => (target >= range.start && target <= range.end ? acc + 1 : acc), 0)
+  }
 
   return (
     <div className="relative pt-2">
@@ -132,6 +160,7 @@ export function MultiLineTimeline({
             startWeekDate={timelineStartDate}
             viewRange={viewRange}
             onRangeSelect={(range) => setViewRange(range)}
+            getDayActiveCount={getDayActiveCount}
           />
           <div className="flex gap-10">
             {orderedTracks.map((track) => {
@@ -157,23 +186,21 @@ export function MultiLineTimeline({
                   track={track}
                 trackHeight={trackHeight}
                 startWeekDate={timelineStartDate}
+                startWeekNumber={clampedStartWeek}
+                endWeekNumber={clampedEndWeek}
                 totalWeeks={totalWeeks}
                 offsetTop={offsetTop}
                 guidePadding={guidePadding}
-                weekHeight={effectiveWeekHeight}
-                lineWidth={lineWidth}
-                lineSpacing={lineSpacing}
-                selectedLine={selectedLine}
-                onSelectLine={(lineId) =>
-                  setSelectedLine((current) => {
-                    const isSame = current?.lineId === lineId && current.trackId === track.id
-                    return isSame ? null : { trackId: track.id, lineId }
-                  })
-                }
-              />
-            )
-          })}
-        </div>
+              weekHeight={effectiveWeekHeight}
+              lineWidth={lineWidth}
+              lineSpacing={lineSpacing}
+              selectedLine={selectedLine}
+              onHoverLine={(lineId, anchor) => setSelectedLine({ trackId: track.id, lineId, anchor })}
+              onClearLine={() => setSelectedLine(null)}
+            />
+          )
+        })}
+      </div>
       </div>
       </div>
       <TimelineSettingsDrawer

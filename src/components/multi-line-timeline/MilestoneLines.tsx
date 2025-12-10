@@ -59,8 +59,18 @@ export function MilestoneLines({
           const groupSelected = group.items.some((line) => selectedId === `${line.title}-${line.at}`)
           return (
             <div key={`milestone-group-${group.items[0].dayKey}`} className="absolute left-0 right-0" style={{ top: group.top }}>
-              <div className="flex items-center gap-3">
-                <div className="flex flex-nowrap items-center gap-2 pl-1 pr-3" style={{ pointerEvents: 'auto' }}>
+              <div className="flex items-center gap-3 justify-end">
+                <div
+                  className="h-px flex-1"
+                  style={{
+                    background:
+                      groupSelected
+                        ? 'linear-gradient(90deg, rgba(132,146,166,0.25) 0%, rgba(31,182,255,0.7) 100%)'
+                        : 'linear-gradient(90deg, rgba(132,146,166,0.2) 0%, rgba(132,146,166,0.4) 100%)',
+                    height: groupSelected ? 2 : 1,
+                  }}
+                />
+                <div className="flex flex-nowrap items-center gap-2 pl-3 pr-1" style={{ pointerEvents: 'auto' }}>
                   {group.items.slice(0, 3).map((line) => {
                     const milestoneId = `${line.title}-${line.at}`
                     const isSelected = selectedId === milestoneId
@@ -89,16 +99,6 @@ export function MilestoneLines({
                     </span>
                   ) : null}
                 </div>
-                <div
-                  className="h-px flex-1"
-                  style={{
-                    background:
-                      groupSelected
-                        ? 'linear-gradient(90deg, rgba(31,182,255,1) 0%, rgba(31,182,255,0.4) 100%)'
-                        : 'linear-gradient(90deg, rgba(132,146,166,0.4) 0%, rgba(132,146,166,0.2) 100%)',
-                    height: groupSelected ? 2 : 1,
-                  }}
-                />
               </div>
             </div>
           )

@@ -22,7 +22,7 @@ function App() {
             milestones={milestones}
             weeks={52}
             sprintLength={2}
-            weekHeight={180}
+            weekHeight={120}
           />
         </section>
       </div>

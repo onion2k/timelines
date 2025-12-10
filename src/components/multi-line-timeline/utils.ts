@@ -79,9 +79,16 @@ export function computeTopPx({
   offsetTop: number
 }) {
   if (atDate && startWeekDate && totalWeeks > 0) {
-    const diffWeeks = (atDate.getTime() - startWeekDate.getTime()) / WEEK_MS
-    const clampedWeeks = clampNumber(diffWeeks, 0, Math.max(0, totalWeeks - 1))
-    const position = getTopForWeekOffset({ weekOffset: clampedWeeks, totalWeeks, weekHeight }) - offsetTop
+    const DAY_MS = 1000 * 60 * 60 * 24
+    const diffDays = (atDate.getTime() - startWeekDate.getTime()) / DAY_MS
+    const totalDays = Math.max(0, totalWeeks * 7 - 1)
+    const clampedDays = clampNumber(diffDays, 0, totalDays)
+    const weekOffset = Math.floor(clampedDays / 7)
+    const dayRemainder = clampedDays - weekOffset * 7
+    const weekTop = getTopForWeekOffset({ weekOffset, totalWeeks, weekHeight }) - offsetTop
+    const dayHeight = weekHeight / 7
+    const dayFromTop = 6 - dayRemainder // top of week is the last day (Sunday), bottom is Monday
+    const position = weekTop + dayFromTop * dayHeight + dayHeight / 2
     return clampNumber(position, 0, trackHeight)
   }
   if (totalItems <= 1) return trackHeight / 2

@@ -2,6 +2,8 @@ import { useRef, useState, type MouseEvent } from 'react'
 import { WEEK_MS } from './constants'
 import { clampNumber, getTopForWeekNumber } from './utils'
 
+const DAY_MS = 24 * 60 * 60 * 1000
+
 type WeekRailProps = {
   totalWeeks: number
   height: number
@@ -11,6 +13,7 @@ type WeekRailProps = {
   startWeekDate: Date | null
   viewRange: { start: number; end: number } | null
   onRangeSelect: (range: { start: number; end: number } | null) => void
+  getDayActiveCount?: (date: Date) => number
 }
 
 export function WeekRail({
@@ -22,11 +25,13 @@ export function WeekRail({
   startWeekDate,
   viewRange,
   onRangeSelect,
+  getDayActiveCount,
 }: WeekRailProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [dragRange, setDragRange] = useState<{ start: number; end: number } | null>(null)
+  const [hoverDay, setHoverDay] = useState<{ key: string; count: number } | null>(null)
   const markers = Array.from({ length: totalWeeks }, (_, i) => i + 1)
-  const labelBaseDate = startWeekDate ? new Date(Date.UTC(startWeekDate.getUTCFullYear(), 0, 1)) : null
+  const labelBaseDate = startWeekDate ? startWeekDate : null
   const formatLabel = (week: number) => {
     if (!labelBaseDate) return `Week ${week}`
     const weekStartDate = new Date(labelBaseDate.getTime() + (week - 1) * WEEK_MS)
@@ -110,21 +115,62 @@ export function WeekRail({
           ) : null}
           {markers.map((week) => {
             const topPx = getTopForWeekNumber({ weekNumber: week, totalWeeks, weekHeight })
-            const isSprintBoundary = sprintLength > 0 && (week - 1) % sprintLength === 0
+            const dayHeight = weekHeight / 7
+            const weekStartDate = startWeekDate ? new Date(startWeekDate.getTime() + (week - 1) * WEEK_MS) : null
             return (
               <div key={week} className="absolute left-0 right-0" style={{ top: topPx }}>
-                <div className="flex items-center gap-5 pl-6">
-                  <span
-                    className="h-3 w-3 rounded-full absolute -translate-x-1/2"
-                    style={{
-                      backgroundColor: isSprintBoundary ? '#ff7849' : '#8492a6',
-                      left: 'calc(1rem + 1px)', // align dot center with the week line center
-                    }}
-                    aria-hidden
-                  />
-                  <div className="flex items-center gap-2 rounded-full bg-gray-light/30 px-2 py-1">
-                    <span className="text-xs font-semibold text-gray-dark">{formatLabel(week)}</span>
-                  </div>
+                <div className="absolute left-4 top-0" style={{ height: weekHeight }} aria-hidden>
+                  {Array.from({ length: 7 }, (_, visualIndex) => {
+                    const dayOffset = 6 - visualIndex // render last day at the top, first at the bottom
+                    const dayDate = weekStartDate ? new Date(weekStartDate.getTime() + dayOffset * DAY_MS) : null
+                    const isMonday = dayDate ? dayDate.getUTCDay() === 1 : false
+                    const markerTop = dayHeight * (visualIndex + 0.5)
+                    const showLabel =
+                      weekHeight < 100
+                        ? dayDate
+                          ? dayDate.getUTCDay() === 1 // only Mondays when compact
+                          : false
+                        : true
+                    const dayKey = dayDate ? dayDate.toISOString().slice(0, 10) : `w${week}-d${visualIndex}`
+                    const countText =
+                      hoverDay?.key === dayKey ? ` · ${hoverDay.count} in progress` : ''
+                    return (
+                      <div
+                        key={visualIndex}
+                        className="absolute flex items-center gap-2"
+                        style={{ top: markerTop, left: 0 }}
+                        onMouseEnter={() => {
+                          if (!dayDate || !getDayActiveCount) {
+                            setHoverDay(null)
+                            return
+                          }
+                          setHoverDay({ key: dayKey, count: getDayActiveCount(dayDate) })
+                        }}
+                        onMouseLeave={() => setHoverDay(null)}
+                      >
+                        <span
+                          className="block rounded-full"
+                          style={{
+                            width: isMonday ? 12 : 8,
+                            height: isMonday ? 2.5 : 2,
+                            backgroundColor: isMonday ? '#0ea5e9' : '#a8b5c3',
+                            boxShadow: isMonday ? '0 0 0 4px rgba(14,165,233,0.16)' : undefined,
+                          }}
+                        />
+                        {dayDate && showLabel ? (
+                          <span className="block text-[10px] font-semibold text-gray-dark/80 leading-none whitespace-nowrap">
+                            {dayDate.toLocaleDateString('en-US', {
+                              weekday: 'short',
+                              month: 'short',
+                              day: 'numeric',
+                              timeZone: 'UTC',
+                            })}
+                            {countText}
+                          </span>
+                        ) : null}
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )

@@ -7,7 +7,8 @@ type TrackItemLineProps = {
   baseLeft?: number
   lineWidth?: number
   selected?: boolean
-  onClick?: () => void
+  onHover?: (info: { clientX: number; clientY: number; targetRect: DOMRect }) => void
+  onLeave?: () => void
 }
 
 const LINE_PADDING = 6
@@ -21,7 +22,8 @@ export function TrackItemLine({
   baseLeft = DEFAULT_BASE_LEFT,
   lineWidth = 6,
   selected = false,
-  onClick,
+  onHover,
+  onLeave,
 }: TrackItemLineProps) {
   const svgHeight = line.heightPx + LINE_PADDING * 2
   const startY = LINE_PADDING
@@ -37,9 +39,15 @@ export function TrackItemLine({
     <div
       className="absolute"
       style={{ top: containerTop, left: x, cursor: 'pointer' }}
-      role="button"
-      tabIndex={-1}
-      onClick={onClick}
+      onMouseEnter={(e) => {
+        const rect = e.currentTarget.getBoundingClientRect()
+        onHover?.({ clientX: e.clientX, clientY: e.clientY, targetRect: rect })
+      }}
+      onMouseMove={(e) => {
+        const rect = e.currentTarget.getBoundingClientRect()
+        onHover?.({ clientX: e.clientX, clientY: e.clientY, targetRect: rect })
+      }}
+      onMouseLeave={() => onLeave?.()}
     >
       <svg width={22} height={svgHeight} viewBox={`0 0 22 ${svgHeight}`}>
         <title>{`${line.title} (${line.at ?? 'start'}${line.endAt ? ` → ${line.endAt}` : ''})`}</title>

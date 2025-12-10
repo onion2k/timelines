@@ -14,7 +14,7 @@ export function TrackDurationSpans({ spans, color }: { spans: DurationSpan[]; co
             height: span.heightPx,
             backgroundColor: `${color}`,
             opacity: 0.25,
-            clipPath: 'polygon(0 0, 100% 6px, 100% calc(100% - 6px), 0 100%)',
+            borderRadius: '12px',
           }}
           aria-hidden
         />

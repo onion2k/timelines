@@ -25,6 +25,13 @@ export function TimelineMinimap({ tracks, weeks }: TimelineMinimapProps) {
     const WEEK_MS = DAY_MS * 7
     const normalizeDateToUTC = (date: Date) =>
       new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
+    const getStartOfWeek = (date: Date) => {
+      const start = normalizeDateToUTC(date)
+      const day = start.getUTCDay()
+      const diff = (day + 6) % 7 // Monday start
+      start.setUTCDate(start.getUTCDate() - diff)
+      return start
+    }
     const getEndOfWeek = (date: Date) => {
       const start = normalizeDateToUTC(date)
       const day = start.getUTCDay()
@@ -38,11 +45,15 @@ export function TimelineMinimap({ tracks, weeks }: TimelineMinimapProps) {
       return Number.isNaN(parsed.getTime()) ? null : normalizeDateToUTC(parsed)
     }
 
-    const allDates = orderedTracks.flatMap((track) => track.items.map((item) => parseAtDate(item.at))).filter(Boolean) as Date[]
+    const allDates = orderedTracks
+      .flatMap((track) =>
+        track.items.flatMap((item) => [parseAtDate(item.at), parseAtDate(item.endAt)].filter(Boolean)),
+      )
+      .filter(Boolean) as Date[]
     if (!allDates.length) return null
     const rawStartDate = new Date(Math.min(...allDates.map((d) => d.getTime())))
     const rawEndDate = new Date(Math.max(...allDates.map((d) => d.getTime())))
-    const originDate = normalizeDateToUTC(new Date(Date.UTC(rawStartDate.getUTCFullYear(), 0, 1)))
+    const originDate = getStartOfWeek(rawStartDate)
     const endWeekDate = getEndOfWeek(rawEndDate)
     const dataWeeks = Math.max(1, Math.floor((endWeekDate.getTime() - originDate.getTime()) / WEEK_MS) + 1)
     const totalWeeks = Math.max(weeks ?? dataWeeks, dataWeeks)

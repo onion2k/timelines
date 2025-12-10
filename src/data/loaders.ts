@@ -34,7 +34,7 @@ export const defaultBranchTracksFieldMapping: BranchTracksFieldMapping = {
     title: 'name',
     startDate: 'at',
     endDate: 'endAt',
-    annotation: 'type',
+    annotation: 'annotation',
   },
 }
 
@@ -72,8 +72,11 @@ function validateItem(item: unknown, mapping: BranchTracksFieldMapping): MultiLi
   const id = pickStringField({ source: value, fieldName: mapping.item.id, label: 'Item id' })
   const title = pickStringField({ source: value, fieldName: mapping.item.title, label: 'Item title' })
   const annotationField = mapping.item.annotation ?? 'annotation'
-  const annotationValue = value[annotationField]
-  const annotation = isString(annotationValue) ? annotationValue : ''
+  const annotationValue =
+    value[annotationField] ??
+    // fallback to a common name if mapping points elsewhere
+    (annotationField !== 'annotation' ? value.annotation : undefined)
+  const annotation = isString(annotationValue) ? normalizeAnnotation(annotationValue) : ''
   const atValue = value[mapping.item.startDate]
   if (!isValidDateString(atValue)) throw new Error(`Invalid start date for item ${id} (expected field: ${mapping.item.startDate})`)
   const endAtField = mapping.item.endDate
@@ -88,6 +91,12 @@ function validateItem(item: unknown, mapping: BranchTracksFieldMapping): MultiLi
     at: atValue,
     endAt: endAtValue as string | undefined,
   }
+}
+
+function normalizeAnnotation(raw: string) {
+  const cleaned = raw.trim()
+  const withoutBrackets = cleaned.replace(/^\[/, '').replace(/\]$/, '')
+  return withoutBrackets.trim().toLowerCase()
 }
 
 function validateTrack(track: unknown, mapping: BranchTracksFieldMapping): MultiLineTimelineTrack {
