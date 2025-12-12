@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "export:single": "npm run build && node scripts/export-single-html.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },

@@ -1,4 +1,4 @@
-import { WEEK_MS, TRACK_NAME_ORDER } from './constants'
+import { TRACK_NAME_ORDER } from './constants'
 import { type DurationSpan, type ItemLine, type MultiLineTimelineItem, type MultiLineTimelineTrack } from './types'
 
 export function clampNumber(value: number, min: number, max: number) {

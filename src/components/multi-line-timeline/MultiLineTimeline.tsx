@@ -154,7 +154,6 @@ export function MultiLineTimeline({
           <WeekRail
             totalWeeks={totalWeeks}
             height={totalWeeks * effectiveWeekHeight}
-            sprintLength={sprintLength}
             weekHeight={effectiveWeekHeight}
             padding={guidePadding}
             startWeekDate={timelineStartDate}

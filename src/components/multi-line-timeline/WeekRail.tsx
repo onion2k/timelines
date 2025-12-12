@@ -7,7 +7,6 @@ const DAY_MS = 24 * 60 * 60 * 1000
 type WeekRailProps = {
   totalWeeks: number
   height: number
-  sprintLength: number
   weekHeight: number
   padding: number
   startWeekDate: Date | null
@@ -19,7 +18,6 @@ type WeekRailProps = {
 export function WeekRail({
   totalWeeks,
   height,
-  sprintLength,
   weekHeight,
   padding,
   startWeekDate,
@@ -31,12 +29,6 @@ export function WeekRail({
   const [dragRange, setDragRange] = useState<{ start: number; end: number } | null>(null)
   const [hoverDay, setHoverDay] = useState<{ key: string; count: number } | null>(null)
   const markers = Array.from({ length: totalWeeks }, (_, i) => i + 1)
-  const labelBaseDate = startWeekDate ? startWeekDate : null
-  const formatLabel = (week: number) => {
-    if (!labelBaseDate) return `Week ${week}`
-    const weekStartDate = new Date(labelBaseDate.getTime() + (week - 1) * WEEK_MS)
-    return weekStartDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
-  }
 
   const toWeekFromEvent = (clientY: number) => {
     const container = containerRef.current
