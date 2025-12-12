@@ -43,6 +43,7 @@ export function TrackItemLineCard({ line, track, top, left }: TrackItemLineCardP
       <div className="flex items-start justify-between gap-3 p-4">
         <div className="min-w-0">
           <p className="text-[0.7rem] uppercase tracking-wide font-semibold text-gray-dark/70">{track.name}</p>
+          <p className="text-[0.78rem] font-mono text-gray-dark/80">{line.id}</p>
           <p className="text-sm font-semibold text-gray-dark leading-tight">{line.title}</p>
         </div>
         {line.annotation ? (
