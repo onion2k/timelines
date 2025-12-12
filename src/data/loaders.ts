@@ -2,6 +2,8 @@ import tracksData from './branchTracks.json'
 import milestonesData from './milestones.json'
 import { type Milestone, type MultiLineTimelineItem, type MultiLineTimelineTrack } from '../components/MultiLineTimeline'
 
+declare const __BRANCH_TRACKS_DATA__: unknown | undefined
+
 export type BranchTracksFieldMapping = {
   track: {
     id: string
@@ -144,7 +146,7 @@ function validateMilestone(milestone: unknown): Milestone {
 }
 
 export function loadBranchTracks(
-  data: unknown = tracksData,
+  data: unknown = typeof __BRANCH_TRACKS_DATA__ !== 'undefined' ? __BRANCH_TRACKS_DATA__ : tracksData,
   mapping: BranchTracksFieldMapping = defaultBranchTracksFieldMapping,
 ): MultiLineTimelineTrack[] {
   if (!Array.isArray(data)) throw new Error('Tracks data must be an array')
